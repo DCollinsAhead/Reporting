@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Foundry Project Tracking &mdash; Opportunity Pipeline</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+
+  .viz-root {
+    color-scheme: light;
+    --surface-1:      #fcfcfb;
+    --page-plane:     #f9f9f7;
+    --text-primary:   #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted:     #898781;
+    --gridline:       #e1e0d9;
+    --baseline:       #c3c2b7;
+    --border:         rgba(11,11,11,0.10);
+
+    --ahead-blue:  #009FDC;
+    --ahead-navy:  #123A61;
+    --ahead-green: #00B388;
+    --ahead-sky:   #BFE3F2;
+
+    --status-good:     #0ca30c;
+    --status-warning:  #fab219;
+    --status-critical: #d03b3b;
+    --status-none:     #898781;
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    background: var(--page-plane);
+    font-family: 'Poppins', system-ui, -apple-system, "Segoe UI", sans-serif;
+    color: var(--text-primary);
+  }
+  .viz-root { max-width: 1080px; margin: 0 auto; padding: 0 20px 48px; }
+
+  .hero {
+    margin: 0 -20px 28px;
+    padding: 36px 20px 30px;
+    background: linear-gradient(69deg, var(--ahead-navy), var(--ahead-blue));
+    color: #fff;
+  }
+  .hero-title { font-size: 26px; font-weight: 600; margin: 0 0 6px; }
+  .hero-sub { font-size: 13px; color: var(--ahead-sky); }
+
+  .kpi-row {
+    display: flex; flex-wrap: wrap; gap: 12px;
+    margin-bottom: 28px;
+  }
+  .stat-tile {
+    flex: 1 1 180px;
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 18px;
+  }
+  .stat-value {
+    font-size: 32px; font-weight: 600; line-height: 1.1;
+    font-variant-numeric: proportional-nums;
+  }
+  .stat-label { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
+
+  .card {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px 22px;
+    margin-bottom: 20px;
+  }
+  .card h2 {
+    font-size: 16px; font-weight: 600; margin: 0 0 4px;
+  }
+  .card .card-sub { font-size: 12px; color: var(--text-muted); margin: 0 0 16px; }
+
+  .bar-row { display: flex; align-items: center; gap: 12px; margin: 0 0 2px; }
+  .bar-row .bar-label {
+    flex: 0 0 220px; font-size: 13px; color: var(--text-secondary);
+    text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .bar-row .bar-track {
+    flex: 1 1 auto; display: flex; align-items: center; gap: 8px;
+    height: 24px;
+  }
+  .bar-row .bar-fill {
+    height: 20px; max-height: 20px;
+    background: var(--ahead-blue);
+    border-radius: 4px;
+    min-width: 4px;
+  }
+  .bar-row .bar-value {
+    font-size: 13px; color: var(--text-secondary);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .rag-bar {
+    display: flex; height: 28px; border-radius: 4px; overflow: hidden;
+    background: var(--gridline);
+  }
+  .rag-seg { height: 100%; }
+  .rag-seg + .rag-seg { margin-left: 2px; }
+  .rag-legend {
+    display: flex; flex-wrap: wrap; gap: 16px; margin-top: 14px;
+  }
+  .rag-legend-item { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-secondary); }
+  .rag-swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+
+  details.table-toggle { margin-top: 14px; }
+  details.table-toggle summary {
+    cursor: pointer; font-size: 12px; color: var(--ahead-blue); font-weight: 500;
+  }
+  details.table-toggle table { margin-top: 10px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table th, table td {
+    text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--gridline);
+  }
+  table th { color: var(--text-muted); font-weight: 500; font-size: 12px; }
+  table td.num { font-variant-numeric: tabular-nums; text-align: right; }
+  table a { color: var(--ahead-blue); text-decoration: none; }
+  table a:hover { text-decoration: underline; }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 12px; font-weight: 500; color: var(--text-primary);
+  }
+  .badge .rag-swatch { width: 8px; height: 8px; border-radius: 50%; }
+  .overdue-flag { color: var(--status-critical); font-weight: 600; }
+
+  footer.note {
+    font-size: 12px; color: var(--text-muted); margin-top: 32px; line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+<div class="viz-root">
+
+  <header class="hero">
+    <div class="hero-title">Foundry Project Tracking &mdash; Opportunity Pipeline</div>
+    <div class="hero-sub">Generated {{ generated_at }} &middot; Open Opportunities only &middot; Source: {{ jira_base_url }}</div>
+  </header>
+
+  <section class="kpi-row">
+    <div class="stat-tile">
+      <div class="stat-value">{{ total }}</div>
+      <div class="stat-label">Open opportunities</div>
+    </div>
+    <div class="stat-tile">
+      <div class="stat-value">{{ overdue }}</div>
+      <div class="stat-label">Past due date</div>
+    </div>
+    <div class="stat-tile">
+      <div class="stat-value">{{ unassigned }}</div>
+      <div class="stat-label">Unassigned</div>
+    </div>
+    <div class="stat-tile">
+      <div class="stat-value">{{ at_risk_count }}</div>
+      <div class="stat-label">At risk (Yellow / Red)</div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Health (RAG)</h2>
+    <p class="card-sub">Share of open opportunities by health status</p>
+    <div class="rag-bar">
+      {% for name, count in rag_counts %}{% if count > 0 %}
+      <div class="rag-seg" style="width: {{ (count / total * 100) if total else 0 }}%; background: {{ rag_style[name].hex }};"></div>
+      {% endif %}{% endfor %}
+    </div>
+    <div class="rag-legend">
+      {% for name, count in rag_counts %}
+      <div class="rag-legend-item">
+        <span class="rag-swatch" style="background: {{ rag_style[name].hex }};"></span>
+        {{ rag_style[name].label }} ({{ name }}) &mdash; {{ count }}
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>By status</h2>
+    <p class="card-sub">Open opportunities grouped by current Jira status</p>
+    {% for name, count in status_counts %}
+    <div class="bar-row">
+      <div class="bar-label" title="{{ name }}">{{ name }}</div>
+      <div class="bar-track">
+        <div class="bar-fill" style="width: {{ (count / max_status * 100) if max_status else 0 }}%"></div>
+        <span class="bar-value">{{ count }}</span>
+      </div>
+    </div>
+    {% endfor %}
+  </section>
+
+  <section class="card">
+    <h2>By category</h2>
+    <p class="card-sub">Top categories, remainder folded into &ldquo;Other&rdquo;</p>
+    {% for name, count in category_counts %}
+    <div class="bar-row">
+      <div class="bar-label" title="{{ name }}">{{ name }}</div>
+      <div class="bar-track">
+        <div class="bar-fill" style="width: {{ (count / max_category * 100) if max_category else 0 }}%"></div>
+        <span class="bar-value">{{ count }}</span>
+      </div>
+    </div>
+    {% endfor %}
+  </section>
+
+  <section class="card">
+    <h2>By owner</h2>
+    <p class="card-sub">Top 10 assignees by open opportunity count, remainder folded into &ldquo;Other&rdquo;</p>
+    {% for name, count in assignee_counts %}
+    <div class="bar-row">
+      <div class="bar-label" title="{{ name }}">{{ name }}</div>
+      <div class="bar-track">
+        <div class="bar-fill" style="width: {{ (count / max_assignee * 100) if max_assignee else 0 }}%"></div>
+        <span class="bar-value">{{ count }}</span>
+      </div>
+    </div>
+    {% endfor %}
+  </section>
+
+  <section class="card">
+    <h2>At risk &mdash; Yellow / Red</h2>
+    <p class="card-sub">{{ at_risk|length }} opportunities currently flagged Yellow or Red</p>
+    {% if at_risk %}
+    <table>
+      <thead>
+        <tr><th>Key</th><th>Summary</th><th>Owner</th><th>Status</th><th>Health</th><th class="num">Age (days)</th></tr>
+      </thead>
+      <tbody>
+        {% for row in at_risk %}
+        <tr>
+          <td><a href="{{ row.url }}" target="_blank" rel="noopener">{{ row.key }}</a></td>
+          <td>{{ row.summary }}</td>
+          <td>{{ row.assignee }}</td>
+          <td>{{ row.status }}</td>
+          <td><span class="badge"><span class="rag-swatch" style="background: {{ rag_style[row.rag].hex }};"></span>{{ row.rag }}</span></td>
+          <td class="num">{{ row.age_days }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="card-sub">None &mdash; nothing is currently flagged Yellow or Red.</p>
+    {% endif %}
+  </section>
+
+  <section class="card">
+    <h2>Oldest open opportunities</h2>
+    <p class="card-sub">Top {{ aging|length }} open opportunities by time since creation</p>
+    <table>
+      <thead>
+        <tr><th>Key</th><th>Summary</th><th>Owner</th><th>Status</th><th>Health</th><th>Due</th><th class="num">Age (days)</th></tr>
+      </thead>
+      <tbody>
+        {% for row in aging %}
+        <tr>
+          <td><a href="{{ row.url }}" target="_blank" rel="noopener">{{ row.key }}</a></td>
+          <td>{{ row.summary }}</td>
+          <td>{{ row.assignee }}</td>
+          <td>{{ row.status }}</td>
+          <td><span class="badge"><span class="rag-swatch" style="background: {{ rag_style[row.rag].hex }};"></span>{{ row.rag }}</span></td>
+          <td class="{{ 'overdue-flag' if row.is_overdue else '' }}">{{ row.duedate if row.duedate else '—' }}</td>
+          <td class="num">{{ row.age_days }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <footer class="note">
+    This is a static snapshot, not a live view &mdash; Roost hosts static files only, so figures reflect
+    Jira as of the generated-at time above. Regenerate with <code>python generate_dashboard.py</code>
+    and re-upload to Roost for a fresh snapshot.
+  </footer>
+
+</div>
+</body>
+</html>
