@@ -1,0 +1,20 @@
+{
+  "name": "fpt-dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Standalone local dashboard for the Foundry Project Tracking (FPT) Jira project - queries Jira on demand and opens the visuals in your browser. No Roost, no separate proxy to host.",
+  "bin": {
+    "fpt-dashboard": "bin/cli.js"
+  },
+  "main": "src/server.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node bin/cli.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2"
+  }
+}

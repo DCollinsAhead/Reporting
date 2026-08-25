@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Foundry Project Tracking — Live Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="hero">
+    <div>
+      <h1>Foundry Project Tracking (FPT)</h1>
+      <p>Live from Jira - running locally on this machine</p>
+    </div>
+    <div class="hero-controls">
+      <span id="last-updated">Last updated -</span>
+      <button id="refresh-btn" class="refresh" type="button">Refresh now</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="card">
+      <div class="card-header">
+        <h2>Issues by status</h2>
+        <button id="status-toggle" class="view-toggle" type="button">View as table</button>
+      </div>
+      <div class="legend">
+        <span class="legend-item"><span class="legend-swatch" style="background: var(--stage-todo)"></span>To Do</span>
+        <span class="legend-item"><span class="legend-swatch" style="background: var(--stage-inprogress)"></span>In Progress</span>
+        <span class="legend-item"><span class="legend-swatch" style="background: var(--stage-done)"></span>Done</span>
+      </div>
+      <div id="status-status" class="status-line" style="display: none"></div>
+      <div id="status-chart"></div>
+      <div id="status-table" style="display: none"></div>
+    </section>
+
+    <section class="card">
+      <div class="card-header">
+        <h2>Open issues by assignee</h2>
+        <button id="assignee-toggle" class="view-toggle" type="button">View as table</button>
+      </div>
+      <div id="assignee-status" class="status-line" style="display: none"></div>
+      <div id="assignee-chart"></div>
+      <div id="assignee-table" style="display: none"></div>
+    </section>
+  </main>
+
+  <footer>Auto-refreshes every 15 minutes - queries Jira directly from this machine, nothing sent anywhere else.</footer>
+
+  <div id="tooltip" class="tooltip"></div>
+
+  <script src="dashboard.js"></script>
+</body>
+</html>
