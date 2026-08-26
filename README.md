@@ -98,6 +98,54 @@ Production Finding Issue Source/Type, Systemic?) is resolved by display name
 at runtime (`getFieldId` in `jiraClient.js`) rather than a hardcoded
 `customfield_NNNNN`, so field-ID drift across Jira instances doesn't matter.
 
+## Jira fields used
+
+### Standard fields
+
+| Field | Used by | Purpose |
+|---|---|---|
+| `key` | every page (implicit - Jira always returns it) | issue identifier |
+| `assignee` | Engineering/Operations/PgM Workload, Engineering Manager's Workload, Engineering Staffing Planning, Quotation | per-person grouping |
+| `status` | Engineering/Operations/PgM Workload, Engineering Manager's Workload, Quotation, R&E Issue Tracking | active/backlog bucketing, status pills |
+| `issuetype` | Engineering/Operations/PgM Workload, Engineering Manager's Workload, Engineering Staffing Planning | weight lookup, display; also used as a JQL filter on every workload page to scope it to its issue types |
+| `resolution` | Engineering Manager's Workload (returned field); JQL-filter-only (`resolution = Unresolved`) on Engineering/Operations/PgM Workload and Engineering Staffing Planning | unresolved-only scoping |
+| `resolutiondate` | Quotation | Time To Completion approximation |
+| `created` | Quotation, Opportunity Overview, R&E Issue Tracking | monthly trends, date-window filters |
+| `summary` | R&E Issue Tracking (on the finding); every parent Opportunity issue, via the batched parent lookup | display text, "Opportunity Summary" column |
+| `parent` | Engineering/Operations/PgM Workload, Engineering Manager's Workload, Engineering Staffing Planning, Quotation, R&E Issue Tracking | links a child issue to its Opportunity |
+
+### Custom fields
+
+Fields marked "resolved by name" go through `getFieldId()` in `jiraClient.js`
+at runtime (looked up by display name against `/rest/api/3/field`, not a
+hardcoded ID) - the four with a listed ID below were provided directly and
+aren't wired into a route yet.
+
+| Field | Custom field ID | Used by |
+|---|---|---|
+| Complexity Level | resolved by name | Engineering/Operations/PgM Workload, Engineering Manager's Workload, Engineering Staffing Planning |
+| Opportunity Type | resolved by name | every page - directly on Opportunity Overview, via the parent Opportunity lookup everywhere else |
+| Start date | resolved by name | Engineering Staffing Planning |
+| Due date | resolved by name | Engineering Staffing Planning |
+| Production Finding Issue Source | resolved by name | R&E Issue Tracking |
+| Production Finding Issue Type | resolved by name | R&E Issue Tracking |
+| Systemic? | resolved by name | R&E Issue Tracking |
+| Number of Devices | `customfield_11834` | not yet used - appears on the (Draft) PgM Dashboard pages, which aren't built |
+| Integrated Racks | `customfield_11699` | not yet used - same draft pages |
+| Issue Type | `customfield_12689` | not yet used - see note below |
+| Issue Source | `customfield_12690` | not yet used - see note below |
+
+**Note on Issue Type / Issue Source:** these names are close enough to
+"Production Finding Issue Type" / "Production Finding Issue Source" (what
+`reIssueTracking.js` actually calls `getFieldId()` with) that they may be
+the same two fields under their real, shorter display names - in which case
+`getFieldId('Production Finding Issue Type')` would fail to resolve against
+a live Jira instance and R&E Issue Tracking would break. Worth confirming
+before relying on that page; if they're the same fields, update
+`reIssueTracking.js` to request `customfield_12689`/`customfield_12690`
+directly (or call `getFieldId('Issue Type')`/`getFieldId('Issue Source')`)
+instead of the longer guessed names.
+
 ## Status
 
 - [x] Jira aggregation logic - `server/src/jiraClient.js` (Option A, now
