@@ -74,7 +74,7 @@ router.get('/api/engineering-staffing-planning', async (req, res) => {
         opportunitySummary: parent?.summary || '—',
         assignee: displayName,
         issueType,
-        complexity: complexityValue?.replace(/^\d - /, '') || '—',
+        complexity: complexityValue || '—',
         startDate: startDate || null,
         dueDate: dueDate || null,
       });

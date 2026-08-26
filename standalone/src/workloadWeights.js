@@ -2,20 +2,27 @@
 // Only issue types with an entry here count toward engineering workload -
 // everything else (Opportunity, Production Finding, generic Subtask, ...)
 // is out of scope for this weighting.
+//
+// Keys must match the "Complexity Level" custom field's actual Jira option
+// labels verbatim - confirmed against the live FPT project's field metadata
+// and real issues to be the bare "Easy"/"Medium"/"Hard" (no numeric prefix;
+// "Super Hard" isn't a configured option on this field at all today, but is
+// kept here in case it's added later - an unmatched key is harmless, it just
+// can't match anything until then).
 const WORKLOAD_WEIGHTS = {
-  'Integration Execution': { '1 - Easy': 3, '2 - Medium': 5, '3 - Hard': 7, '4 - Super Hard': 15 },
-  'Meta Integration Review': { '1 - Easy': 1, '2 - Medium': 2, '3 - Hard': 3, '4 - Super Hard': 6 },
-  'Configuration Execution': { '1 - Easy': 0.5, '2 - Medium': 1, '3 - Hard': 3, '4 - Super Hard': 6 },
-  'Configuration Sustainment': { '1 - Easy': 0.5, '2 - Medium': 1, '3 - Hard': 2 },
-  'Warehouse Execution': { '1 - Easy': 0.5, '2 - Medium': 1, '3 - Hard': 2 },
-  'Integration Finalization': { '1 - Easy': 0.5, '2 - Medium': 1, '3 - Hard': 2 },
-  'Operations Execution - Configuration': { '1 - Easy': 0.5, '2 - Medium': 1, '3 - Hard': 2, '4 - Super Hard': 4 },
-  'Operations Execution - Integration': { '1 - Easy': 0.5, '2 - Medium': 1, '3 - Hard': 2, '4 - Super Hard': 4 },
-  'Operations Execution - Warehousing': { '1 - Easy': 0.5, '2 - Medium': 1, '3 - Hard': 2, '4 - Super Hard': 4 },
-  'PgM Execution - Configuration': { '1 - Easy': 0.5, '2 - Medium': 1, '3 - Hard': 2, '4 - Super Hard': 4 },
-  'PgM Execution - Integration': { '1 - Easy': 0.5, '2 - Medium': 1, '3 - Hard': 2, '4 - Super Hard': 4 },
-  'PgM Execution - Warehousing': { '1 - Easy': 0.5, '2 - Medium': 1, '3 - Hard': 2, '4 - Super Hard': 4 },
-  'PgM Execution - IMS': { '1 - Easy': 0.5, '2 - Medium': 1, '3 - Hard': 2, '4 - Super Hard': 4 },
+  'Integration Execution': { Easy: 3, Medium: 5, Hard: 7, 'Super Hard': 15 },
+  'Meta Integration Review': { Easy: 1, Medium: 2, Hard: 3, 'Super Hard': 6 },
+  'Configuration Execution': { Easy: 0.5, Medium: 1, Hard: 3, 'Super Hard': 6 },
+  'Configuration Sustainment': { Easy: 0.5, Medium: 1, Hard: 2 },
+  'Warehouse Execution': { Easy: 0.5, Medium: 1, Hard: 2 },
+  'Integration Finalization': { Easy: 0.5, Medium: 1, Hard: 2 },
+  'Operations Execution - Configuration': { Easy: 0.5, Medium: 1, Hard: 2, 'Super Hard': 4 },
+  'Operations Execution - Integration': { Easy: 0.5, Medium: 1, Hard: 2, 'Super Hard': 4 },
+  'Operations Execution - Warehousing': { Easy: 0.5, Medium: 1, Hard: 2, 'Super Hard': 4 },
+  'PgM Execution - Configuration': { Easy: 0.5, Medium: 1, Hard: 2, 'Super Hard': 4 },
+  'PgM Execution - Integration': { Easy: 0.5, Medium: 1, Hard: 2, 'Super Hard': 4 },
+  'PgM Execution - Warehousing': { Easy: 0.5, Medium: 1, Hard: 2, 'Super Hard': 4 },
+  'PgM Execution - IMS': { Easy: 0.5, Medium: 1, Hard: 2, 'Super Hard': 4 },
 };
 
 const CHILD_ISSUE_TYPES = Object.keys(WORKLOAD_WEIGHTS);

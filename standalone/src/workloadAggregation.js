@@ -84,7 +84,7 @@ function aggregateWorkload(
       issueType,
       status: statusName,
       bucket,
-      complexity: complexityValue?.replace(/^\d - /, '') || '—',
+      complexity: complexityValue || '—',
       assignee: displayName,
     });
   }

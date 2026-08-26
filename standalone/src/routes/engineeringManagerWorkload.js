@@ -66,7 +66,7 @@ router.get('/api/engineering-manager-workload', async (req, res) => {
           issueType,
           status: statusName,
           bucket: statusName === 'Pending Assignment' ? 'backlog' : 'other',
-          complexity: complexityValue?.replace(/^\d - /, '') || '—',
+          complexity: complexityValue || '—',
           assignee: displayName,
         });
       }
