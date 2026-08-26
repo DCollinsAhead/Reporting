@@ -376,9 +376,6 @@ const WORKLOAD_PAGES = [
     apiPath: '/api/engineering-workload',
     activeLabel: 'Active Work Items',
     backlogLabel: 'Backlog Work Items',
-    activeSub:
-      'Child Issue Type: Configuration/Integration Execution, Configuration Sustainment, Integration Finalization, Meta Integration Review. Resolution: Unresolved. Assignee is not Curt Petty. Status: Awaiting Parts, In Process, On Hold, Pending Response - Account Team/Customer, Pending Response - Foundry Internal.',
-    backlogSub: 'New, Pending Assignment, Assigned',
     hasSlicer: false,
   },
   {
@@ -388,8 +385,6 @@ const WORKLOAD_PAGES = [
     apiPath: '/api/operations-workload',
     activeLabel: 'Active Work Items',
     backlogLabel: 'Backlog Work Items',
-    activeSub: 'In Process, On Hold, Awaiting Parts',
-    backlogSub: 'Assigned, New, Pending Assignment',
   },
   {
     id: 'pgm-workload',
@@ -398,8 +393,6 @@ const WORKLOAD_PAGES = [
     apiPath: '/api/program-management-workload',
     activeLabel: 'Active Work Items',
     backlogLabel: 'Backlog Work Items',
-    activeSub: 'Awaiting Parts, In Process, On Hold, Systemic Resolution, Pending Response',
-    backlogSub: 'Assigned, New',
   },
 ];
 
@@ -423,9 +416,9 @@ function buildWorkloadPanel(cfg) {
 
   const chartsRow = el('div', 'row cols-2');
   const activePanel = el('div', 'panel');
-  activePanel.append(el('h3', null, 'Workload by Assignee'), el('div', 'sub', cfg.activeSub), Object.assign(el('div'), { id: `${cfg.id}-workload-chart` }));
+  activePanel.append(el('h3', null, 'Workload by Assignee'), Object.assign(el('div'), { id: `${cfg.id}-workload-chart` }));
   const backlogPanel = el('div', 'panel');
-  backlogPanel.append(el('h3', null, 'Backlog by Assignee'), el('div', 'sub', cfg.backlogSub), Object.assign(el('div'), { id: `${cfg.id}-backlog-chart` }));
+  backlogPanel.append(el('h3', null, 'Backlog by Assignee'), Object.assign(el('div'), { id: `${cfg.id}-backlog-chart` }));
   chartsRow.append(activePanel, backlogPanel);
 
   const tablePanel = el('div', 'panel');
