@@ -35,28 +35,49 @@ async function jiraFetch(path, params = {}) {
   return res.json();
 }
 
-// maxResults: 0 still returns an accurate `total` without fetching issue bodies -
-// cheap way to get a count for one JQL clause.
+async function jiraPost(path, body) {
+  assertConfigured();
+  const res = await fetch(BASE_URL + path, {
+    method: 'POST',
+    headers: {
+      Authorization: authHeader(),
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const errBody = await res.text();
+    throw new Error(`Jira API ${res.status} on ${path}: ${errBody.slice(0, 300)}`);
+  }
+
+  return res.json();
+}
+
+// Atlassian removed the classic GET /rest/api/3/search (HTTP 410) in favor of
+// two purpose-built endpoints: approximate-count for totals (the new search
+// API no longer returns one), and search/jql (cursor-paginated via
+// nextPageToken, no startAt/total) for actual issue data.
 async function countIssues(jql) {
-  const data = await jiraFetch('/rest/api/3/search', { jql, maxResults: 0 });
-  return data.total;
+  const data = await jiraPost('/rest/api/3/search/approximate-count', { jql });
+  return data.count;
 }
 
 async function searchAll(jql, fields) {
   const issues = [];
-  let startAt = 0;
-  const pageSize = 100;
+  let nextPageToken;
 
   while (true) {
-    const data = await jiraFetch('/rest/api/3/search', {
+    const data = await jiraPost('/rest/api/3/search/jql', {
       jql,
-      fields: fields.join(','),
-      startAt,
-      maxResults: pageSize,
+      fields,
+      maxResults: 100,
+      ...(nextPageToken ? { nextPageToken } : {}),
     });
     issues.push(...data.issues);
-    startAt += data.issues.length;
-    if (startAt >= data.total || data.issues.length === 0) break;
+    if (!data.nextPageToken || data.issues.length === 0) break;
+    nextPageToken = data.nextPageToken;
   }
 
   return issues;
