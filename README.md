@@ -132,19 +132,6 @@ aren't wired into a route yet.
 | Systemic? | resolved by name | R&E Issue Tracking |
 | Number of Devices | `customfield_11834` | not yet used - appears on the (Draft) PgM Dashboard pages, which aren't built |
 | Integrated Racks | `customfield_11699` | not yet used - same draft pages |
-| Issue Type | `customfield_12689` | not yet used - see note below |
-| Issue Source | `customfield_12690` | not yet used - see note below |
-
-**Note on Issue Type / Issue Source:** these names are close enough to
-"Production Finding Issue Type" / "Production Finding Issue Source" (what
-`reIssueTracking.js` actually calls `getFieldId()` with) that they may be
-the same two fields under their real, shorter display names - in which case
-`getFieldId('Production Finding Issue Type')` would fail to resolve against
-a live Jira instance and R&E Issue Tracking would break. Worth confirming
-before relying on that page; if they're the same fields, update
-`reIssueTracking.js` to request `customfield_12689`/`customfield_12690`
-directly (or call `getFieldId('Issue Type')`/`getFieldId('Issue Source')`)
-instead of the longer guessed names.
 
 ## Status
 
