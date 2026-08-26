@@ -82,19 +82,19 @@ const GENERIC_BANDS = [
   { max: 1, color: 'var(--status-critical)' },
 ];
 
-// Engineering Workload's "Workload by Assignee" bullet chart, ground-truthed
-// from the source .pbix's Bullet Chart visual (targetValue=10, targetValue2=15,
-// band percentages 0/100/130/150/160/196 of targetValue, syncAxis: true).
+// Engineering Workload's "Workload by Assignee" and "Backlog by Assignee"
+// bullet charts, ground-truthed from the source .pbix's Bullet Chart visual
+// (targetValue=10, band percentages 0/100/130/150/160/196 of targetValue,
+// syncAxis: true - both charts on this page share this same configuration).
 const WORKLOAD_BULLET_BANDS = [
   { max: 10, color: '#008000' },
   { max: 13, color: '#F4C430' },
   { max: 15, color: '#E67E22' },
   { max: 19.6, color: '#D9455F' },
 ];
-const WORKLOAD_BULLET_TARGET = 15;
 const WORKLOAD_BULLET_AXIS_MAX = 19.6;
 
-function bulletRow({ label, value, axisMax, bands, target, tooltipText }) {
+function bulletRow({ label, value, axisMax, bands, tooltipText }) {
   const row = el('div', 'bullet-row');
 
   const name = el('div', 'bullet-name');
@@ -122,12 +122,6 @@ function bulletRow({ label, value, axisMax, bands, target, tooltipText }) {
   if (bands !== GENERIC_BANDS) fill.style.background = '#000';
   track.appendChild(fill);
 
-  if (target != null) {
-    const marker = el('div', 'bullet-target', '✕');
-    marker.style.left = `${(target / axisMax) * 100}%`;
-    track.appendChild(marker);
-  }
-
   const axis = el('div', 'bullet-axis');
   const ticks = [0, axisMax / 2, axisMax];
   ticks.forEach((tick) => axis.appendChild(el('span', null, String(Number(tick.toFixed(1))))));
@@ -145,7 +139,7 @@ function renderBulletChart(container, rows, opts = {}) {
   }
   const bands = opts.bands || GENERIC_BANDS;
   const axisMax = opts.axisMax ?? niceMax(Math.max(...rows.map((r) => r.value)));
-  container.replaceChildren(...rows.map((r) => bulletRow({ ...r, axisMax, bands, target: opts.target })));
+  container.replaceChildren(...rows.map((r) => bulletRow({ ...r, axisMax, bands })));
 }
 
 function renderGroupedChart(container, months, series) {
@@ -470,22 +464,22 @@ function renderWorkloadPanel(cfg) {
   document.getElementById(`${cfg.id}-kpi-active`).textContent = filteredItems.filter((i) => i.bucket === 'active').length;
   document.getElementById(`${cfg.id}-kpi-backlog`).textContent = filteredItems.filter((i) => i.bucket === 'backlog').length;
 
+  const bulletOpts = cfg.id === 'eng-workload' ? { bands: WORKLOAD_BULLET_BANDS, axisMax: WORKLOAD_BULLET_AXIS_MAX } : {};
   renderBulletChart(
     document.getElementById(`${cfg.id}-workload-chart`),
     filteredWorkload
       .filter((w) => w.activeWeight > 0)
       .sort((a, b) => b.activeWeight - a.activeWeight)
       .map((w) => ({ label: w.displayName, value: w.activeWeight, tooltipText: `${w.displayName}: ${w.activeWeight} weighted active` })),
-    cfg.id === 'eng-workload'
-      ? { bands: WORKLOAD_BULLET_BANDS, target: WORKLOAD_BULLET_TARGET, axisMax: WORKLOAD_BULLET_AXIS_MAX }
-      : {}
+    bulletOpts
   );
   renderBulletChart(
     document.getElementById(`${cfg.id}-backlog-chart`),
     filteredWorkload
       .filter((w) => w.backlogWeight > 0)
       .sort((a, b) => b.backlogWeight - a.backlogWeight)
-      .map((w) => ({ label: w.displayName, value: w.backlogWeight, tooltipText: `${w.displayName}: ${w.backlogWeight} weighted backlog` }))
+      .map((w) => ({ label: w.displayName, value: w.backlogWeight, tooltipText: `${w.displayName}: ${w.backlogWeight} weighted backlog` })),
+    bulletOpts
   );
 
   renderWorkItemsTable(document.getElementById(`${cfg.id}-table`), filteredItems, [
