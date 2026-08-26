@@ -71,30 +71,66 @@ function niceMax(value) {
   return Math.ceil(value / step) * step;
 }
 
-// Thresholds are a generic 50/30/20 split, not the source report's exact
-// (unknown) capacity bands - a labeled placeholder until real ones surface.
-function bulletRow({ label, value, axisMax, tooltipText }) {
+// Generic bands (50/30/20 split) - a labeled placeholder used when no real
+// source config is known. WORKLOAD_BULLET_BANDS below is the exception:
+// ground-truthed from the source .pbix's actual Bullet Chart format
+// settings, used only for the Engineering Workload "Workload by Assignee"
+// chart per explicit request.
+const GENERIC_BANDS = [
+  { max: 0.5, color: 'var(--status-good)' },
+  { max: 0.8, color: 'var(--status-warning)' },
+  { max: 1, color: 'var(--status-critical)' },
+];
+
+// Engineering Workload's "Workload by Assignee" bullet chart, ground-truthed
+// from the source .pbix's Bullet Chart visual (targetValue=10, targetValue2=15,
+// band percentages 0/100/130/150/160/196 of targetValue, syncAxis: true).
+const WORKLOAD_BULLET_BANDS = [
+  { max: 10, color: '#008000' },
+  { max: 13, color: '#F4C430' },
+  { max: 15, color: '#E67E22' },
+  { max: 19.6, color: '#D9455F' },
+];
+const WORKLOAD_BULLET_TARGET = 15;
+const WORKLOAD_BULLET_AXIS_MAX = 19.6;
+
+function bulletRow({ label, value, axisMax, bands, target, tooltipText }) {
   const row = el('div', 'bullet-row');
 
   const name = el('div', 'bullet-name');
   name.append(el('span', null, label), el('span', null, String(value)));
 
   const track = el('div', 'bullet-track');
-  const bandGood = el('div', 'bullet-band');
-  Object.assign(bandGood.style, { left: '0%', width: '50%', background: 'var(--status-good)' });
-  const bandWarning = el('div', 'bullet-band');
-  Object.assign(bandWarning.style, { left: '50%', width: '30%', background: 'var(--status-warning)' });
-  const bandCritical = el('div', 'bullet-band');
-  Object.assign(bandCritical.style, { left: '80%', width: '20%', background: 'var(--status-critical)' });
+  let prevMax = 0;
+  bands.forEach(({ max, color }) => {
+    const band = el('div', 'bullet-band');
+    const from = bands === GENERIC_BANDS ? prevMax * axisMax : prevMax;
+    const to = bands === GENERIC_BANDS ? max * axisMax : max;
+    Object.assign(band.style, {
+      left: `${(from / axisMax) * 100}%`,
+      width: `${((to - from) / axisMax) * 100}%`,
+      background: color,
+      opacity: bands === GENERIC_BANDS ? 0.55 : 1,
+    });
+    track.appendChild(band);
+    prevMax = max;
+  });
 
   const fill = el('div', 'bullet-fill');
   const pct = axisMax > 0 ? Math.min((value / axisMax) * 100, 100) : 0;
   Object.assign(fill.style, { left: '0', width: `${pct}%` });
+  if (bands !== GENERIC_BANDS) fill.style.background = '#000';
+  track.appendChild(fill);
 
-  track.append(bandGood, bandWarning, bandCritical, fill);
+  if (target != null) {
+    const marker = el('div', 'bullet-target', '✕');
+    marker.style.left = `${(target / axisMax) * 100}%`;
+    track.appendChild(marker);
+  }
 
   const axis = el('div', 'bullet-axis');
-  [0, axisMax / 2, axisMax].forEach((tick) => axis.appendChild(el('span', null, String(Number(tick.toFixed(1))))));
+  const ticks = [0, axisMax / 2, axisMax];
+  ticks.forEach((tick) => axis.appendChild(el('span', null, String(Number(tick.toFixed(1))))));
 
   row.append(name, track, axis);
   row.addEventListener('mousemove', (evt) => showTooltip(evt, tooltipText));
@@ -102,13 +138,14 @@ function bulletRow({ label, value, axisMax, tooltipText }) {
   return row;
 }
 
-function renderBulletChart(container, rows) {
+function renderBulletChart(container, rows, opts = {}) {
   if (rows.length === 0) {
     container.replaceChildren();
     return;
   }
-  const axisMax = niceMax(Math.max(...rows.map((r) => r.value)));
-  container.replaceChildren(...rows.map((r) => bulletRow({ ...r, axisMax })));
+  const bands = opts.bands || GENERIC_BANDS;
+  const axisMax = opts.axisMax ?? niceMax(Math.max(...rows.map((r) => r.value)));
+  container.replaceChildren(...rows.map((r) => bulletRow({ ...r, axisMax, bands, target: opts.target })));
 }
 
 function renderGroupedChart(container, months, series) {
@@ -445,7 +482,10 @@ function renderWorkloadPanel(cfg) {
     filteredWorkload
       .filter((w) => w.activeWeight > 0)
       .sort((a, b) => b.activeWeight - a.activeWeight)
-      .map((w) => ({ label: w.displayName, value: w.activeWeight, tooltipText: `${w.displayName}: ${w.activeWeight} weighted active` }))
+      .map((w) => ({ label: w.displayName, value: w.activeWeight, tooltipText: `${w.displayName}: ${w.activeWeight} weighted active` })),
+    cfg.id === 'eng-workload'
+      ? { bands: WORKLOAD_BULLET_BANDS, target: WORKLOAD_BULLET_TARGET, axisMax: WORKLOAD_BULLET_AXIS_MAX }
+      : {}
   );
   renderBulletChart(
     document.getElementById(`${cfg.id}-backlog-chart`),

@@ -451,6 +451,20 @@ table.data-table th {
   margin-top: 2px;
 }
 
+.bullet-target {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  line-height: 1;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #000;
+  z-index: 2;
+  /* White halo keeps the marker visible when the black value bar passes
+     over it - without it, a black "x" on the black fill disappears. */
+  text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff;
+}
+
 .pill {
   display: inline-block;
   padding: 2px 9px;
