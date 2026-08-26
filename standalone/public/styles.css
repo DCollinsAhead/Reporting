@@ -20,6 +20,11 @@
   --status-good: #00b388;
   --status-warning: #e0a030;
   --status-critical: #d9455f;
+
+  /* Validated 3-hue categorical set for the opportunity-volume trend chart */
+  --trend-integration: #009fdc;
+  --trend-warehousing: #00b388;
+  --trend-staging: #e0a030;
 }
 
 * {
@@ -78,12 +83,64 @@ button.refresh:hover {
   background: rgba(255, 255, 255, 0.28);
 }
 
+.page-tabs {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 16px 32px 0;
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  border-bottom: 2px solid var(--border);
+}
+
+.tab-btn {
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ink-muted);
+  padding: 10px 14px;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+}
+
+.tab-btn:hover {
+  color: var(--ink-primary);
+}
+
+.tab-btn.active {
+  color: var(--ink-primary);
+  border-bottom-color: var(--ahead-blue);
+}
+
 main {
   max-width: 1000px;
   margin: 0 auto;
   padding: 24px 32px 48px;
-  display: grid;
+}
+
+.page-panel {
+  display: none;
+  flex-direction: column;
   gap: 24px;
+}
+
+.page-panel.active {
+  display: flex;
+}
+
+.page-panel.placeholder .card {
+  color: var(--ink-muted);
+}
+
+.placeholder-visual-list {
+  font-size: 0.78rem;
+  color: var(--ink-secondary);
+  line-height: 1.6;
+  margin: 8px 0 0;
+  padding-left: 18px;
 }
 
 .card {
@@ -389,6 +446,62 @@ table.data-table th {
 .pill-backlog {
   background: var(--surface-alt);
   color: var(--ink-secondary);
+}
+
+.pill-other {
+  background: #fff;
+  color: var(--ink-muted);
+  border: 1px solid var(--border);
+}
+
+.grouped-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  height: 180px;
+  padding-top: 20px;
+  overflow-x: auto;
+}
+
+.grouped-col {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  height: 100%;
+  min-width: 60px;
+}
+
+.grouped-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 140px;
+}
+
+.grouped-bar {
+  width: 16px;
+  border-radius: 3px 3px 0 0;
+  position: relative;
+  min-height: 2px;
+}
+
+.grouped-bar .bv {
+  position: absolute;
+  top: -16px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: var(--ink-primary);
+  white-space: nowrap;
+}
+
+.grouped-label {
+  font-size: 0.68rem;
+  color: var(--ink-muted);
+  margin-top: 6px;
 }
 
 @media (max-width: 900px) {

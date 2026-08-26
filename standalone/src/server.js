@@ -1,7 +1,7 @@
 const express = require('express');
 const path = require('path');
 
-const statusSummaryRouter = require('./routes/statusSummary');
+const opportunityOverviewRouter = require('./routes/opportunityOverview');
 const engineeringWorkloadRouter = require('./routes/engineeringWorkload');
 
 // Same process serves the UI and the API on one origin, so there's no CORS
@@ -12,7 +12,7 @@ function createServer() {
 
   app.use(express.static(path.join(__dirname, '..', 'public')));
   app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
-  app.use(statusSummaryRouter);
+  app.use(opportunityOverviewRouter);
   app.use(engineeringWorkloadRouter);
 
   return app;

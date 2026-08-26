@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Foundry Project Tracking — Live Dashboard</title>
+  <title>Foundry Project Tracking Report</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
@@ -11,8 +11,8 @@
 <body>
   <header class="hero">
     <div>
-      <h1>Foundry Project Tracking (FPT)</h1>
-      <p>Live from Jira - running locally on this machine</p>
+      <h1>Foundry Project Tracking Report</h1>
+      <p>Recreated from Power BI - live Jira data, running locally on this machine</p>
     </div>
     <div class="hero-controls">
       <span id="last-updated">Last updated -</span>
@@ -20,61 +20,76 @@
     </div>
   </header>
 
-  <main>
-    <section class="card">
-      <div class="card-header">
-        <h2>Issues by status</h2>
-        <button id="status-toggle" class="view-toggle" type="button">View as table</button>
+  <nav class="page-tabs" id="page-tabs"></nav>
+
+  <main id="page-panels">
+    <section class="page-panel" id="page-opp-overview">
+      <div class="card">
+        <div class="card-header">
+          <h2>Opportunities by Type</h2>
+        </div>
+        <div id="opp-type-status" class="status-line" style="display: none"></div>
+        <div id="opp-type-chart"></div>
       </div>
-      <div class="legend">
-        <span class="legend-item"><span class="legend-swatch" style="background: var(--stage-todo)"></span>To Do</span>
-        <span class="legend-item"><span class="legend-swatch" style="background: var(--stage-inprogress)"></span>In Progress</span>
-        <span class="legend-item"><span class="legend-swatch" style="background: var(--stage-done)"></span>Done</span>
+
+      <div class="card">
+        <div class="card-header">
+          <h2>Opportunity Volume Over Time</h2>
+        </div>
+        <div class="sub">New opportunities created per month - Integration, Staging, Warehousing only, last ~2 months</div>
+        <div class="legend">
+          <span class="legend-item"><span class="legend-swatch" style="background: var(--trend-integration)"></span>Integration</span>
+          <span class="legend-item"><span class="legend-swatch" style="background: var(--trend-staging)"></span>Staging</span>
+          <span class="legend-item"><span class="legend-swatch" style="background: var(--trend-warehousing)"></span>Warehousing</span>
+        </div>
+        <div id="opp-trend-chart" class="grouped-chart"></div>
       </div>
-      <div id="status-status" class="status-line" style="display: none"></div>
-      <div id="status-chart"></div>
-      <div id="status-table" style="display: none"></div>
     </section>
 
-    <section class="card">
-      <div class="card-header">
-        <h2>Engineering Workload</h2>
-      </div>
-      <div class="sub">Weighted by issue type &amp; complexity (Workload Weight V3) - Curt Petty excluded per source report</div>
-
-      <div class="slicer-box">
-        <div class="slicer-title">Assignee</div>
-        <div class="slicer-chips" id="eng-workload-slicer">
-          <button class="slicer-chip all-chip active" data-assignee="ALL" type="button">All</button>
-          <button class="slicer-chip clear-chip" id="eng-workload-clear" type="button">Clear</button>
+    <section class="page-panel" id="page-eng-workload">
+      <div class="card">
+        <div class="card-header">
+          <h2>Engineering Workload</h2>
         </div>
-      </div>
-
-      <div id="eng-workload-status" class="status-line" style="display: none"></div>
-
-      <div class="row cols-2 kpi-row">
-        <div class="panel kpi-mini"><div class="val" id="kpi-active-count">-</div><div class="lbl">Active Work Items</div></div>
-        <div class="panel kpi-mini"><div class="val" id="kpi-backlog-count">-</div><div class="lbl">Backlog Work Items</div></div>
-      </div>
-
-      <div class="row cols-2">
-        <div class="panel">
-          <h3>Workload by Assignee</h3>
-          <div class="sub">Status = In Process</div>
-          <div id="workload-chart"></div>
+        <div class="sub">
+          Unresolved Configuration/Integration Execution &amp; Meta Integration Review issues - weighted by Workload
+          Weight V3. Curt Petty excluded from the per-assignee charts (he has his own Manager's Workload page).
         </div>
-        <div class="panel">
-          <h3>Backlog by Assignee</h3>
-          <div class="sub">Open, not yet In Process</div>
-          <div id="backlog-chart"></div>
-        </div>
-      </div>
 
-      <div class="panel" style="margin-top: 18px">
-        <h3>Work Items</h3>
-        <div class="sub">Active + backlog tickets, filtered by the assignee slicer above</div>
-        <div style="max-height: 480px; overflow-y: auto">
-          <table class="data-table" id="work-items-table"></table>
+        <div class="slicer-box">
+          <div class="slicer-title">Opportunity Type</div>
+          <div class="slicer-chips" id="eng-workload-slicer">
+            <button class="slicer-chip all-chip active" data-type="ALL" type="button">All</button>
+            <button class="slicer-chip clear-chip" id="eng-workload-clear" type="button">Clear</button>
+          </div>
+        </div>
+
+        <div id="eng-workload-status" class="status-line" style="display: none"></div>
+
+        <div class="row cols-2 kpi-row">
+          <div class="panel kpi-mini"><div class="val" id="kpi-active-count">-</div><div class="lbl">Active Work Items</div></div>
+          <div class="panel kpi-mini"><div class="val" id="kpi-backlog-count">-</div><div class="lbl">Backlog Work Items</div></div>
+        </div>
+
+        <div class="row cols-2">
+          <div class="panel">
+            <h3>Workload by Assignee</h3>
+            <div class="sub">Awaiting Parts, In Process, On Hold, Pending Response</div>
+            <div id="workload-chart"></div>
+          </div>
+          <div class="panel">
+            <h3>Backlog by Assignee</h3>
+            <div class="sub">New, Pending Assignment, Assigned</div>
+            <div id="backlog-chart"></div>
+          </div>
+        </div>
+
+        <div class="panel" style="margin-top: 18px">
+          <h3>Work Items</h3>
+          <div class="sub">All unresolved items in scope, filtered by the Opportunity Type slicer above</div>
+          <div style="max-height: 480px; overflow-y: auto">
+            <table class="data-table" id="work-items-table"></table>
+          </div>
         </div>
       </div>
     </section>

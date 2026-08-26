@@ -97,4 +97,18 @@ async function getProjectStatuses(projectKey) {
   return [...byName.entries()].map(([name, category]) => ({ name, category }));
 }
 
-module.exports = { countIssues, searchAll, getProjectStatuses };
+// Resolves a custom field's ID by its display name instead of hardcoding
+// customfield_NNNNN, which drifts across instances and is easy to get wrong.
+// Cached for the process lifetime - the field list doesn't change while running.
+let fieldNameToId = null;
+async function getFieldId(displayName) {
+  if (!fieldNameToId) {
+    const fields = await jiraFetch('/rest/api/3/field');
+    fieldNameToId = new Map(fields.map((f) => [f.name, f.id]));
+  }
+  const id = fieldNameToId.get(displayName);
+  if (!id) throw new Error(`Jira field not found: "${displayName}"`);
+  return id;
+}
+
+module.exports = { countIssues, searchAll, getProjectStatuses, getFieldId };

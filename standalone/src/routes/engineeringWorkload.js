@@ -1,19 +1,45 @@
 const express = require('express');
-const { searchAll } = require('../jiraClient');
+const { searchAll, getFieldId } = require('../jiraClient');
 const cache = require('../cache');
-const { CHILD_ISSUE_TYPES, workloadWeight, EXCLUDED_ASSIGNEES } = require('../workloadWeights');
+const { workloadWeight } = require('../workloadWeights');
 
 const router = express.Router();
 const CACHE_TTL_SECONDS = Number(process.env.CACHE_TTL_SECONDS || 300);
-// Unconfirmed against the live instance - override if it turns out wrong.
-const COMPLEXITY_FIELD = process.env.JIRA_COMPLEXITY_FIELD || 'customfield_11501';
 
-const COMPLEXITY_LABELS = {
-  '1 - Easy': 'Easy',
-  '2 - Medium': 'Medium',
-  '3 - Hard': 'Hard',
-  '4 - Super Hard': 'Super Hard',
-};
+// Ground truth for this page, taken directly from the source .pbix's page
+// and visual filters (Report/definition/pages/.../page.json + visual.json) -
+// not guessed. This is a narrower set than the full workload-weight table;
+// the other child issue types belong to the Operations/PgM Workload pages.
+const ENGINEERING_ISSUE_TYPES = [
+  'Configuration Execution',
+  'Configuration Sustainment',
+  'Integration Execution',
+  'Integration Finalization',
+  'Meta Integration Review',
+];
+
+// The two bullet charts on this page use slightly different status lists
+// (one adds "Pending Response - Foundry Internal") - using the union as the
+// canonical "Active" bucket rather than picking one arbitrarily.
+const BACKLOG_STATUSES = new Set(['New', 'Pending Assignment', 'Assigned']);
+const ACTIVE_STATUSES = new Set([
+  'Awaiting Parts',
+  'In Process',
+  'On Hold',
+  'Pending Response - Account Team/Customer',
+  'Pending Response - Foundry Internal',
+]);
+
+// Only the two per-assignee bullet charts exclude Curt Petty (he gets his own
+// "Engineering Manager's Workload" page); the KPI totals and Work Items table
+// do not exclude him, per the source report's own visual-level filters.
+const BULLET_CHART_EXCLUDED_ASSIGNEES = new Set(['Curt Petty']);
+
+function bucketFor(statusName) {
+  if (ACTIVE_STATUSES.has(statusName)) return 'active';
+  if (BACKLOG_STATUSES.has(statusName)) return 'backlog';
+  return 'other';
+}
 
 router.get('/api/engineering-workload', async (req, res) => {
   const projectKey = process.env.JIRA_PROJECT_KEY || 'FPT';
@@ -23,9 +49,29 @@ router.get('/api/engineering-workload', async (req, res) => {
   if (cached) return res.json(cached);
 
   try {
-    const typeList = CHILD_ISSUE_TYPES.map((t) => `"${t}"`).join(',');
-    const jql = `project = ${projectKey} AND issuetype in (${typeList}) AND statusCategory != Done`;
-    const issues = await searchAll(jql, ['assignee', 'status', 'issuetype', COMPLEXITY_FIELD, 'parent']);
+    const complexityField = await getFieldId('Complexity Level');
+    const opportunityTypeField = await getFieldId('Opportunity Type');
+
+    const typeList = ENGINEERING_ISSUE_TYPES.map((t) => `"${t}"`).join(',');
+    const jql = `project = ${projectKey} AND resolution = Unresolved AND issuetype in (${typeList})`;
+    const issues = await searchAll(jql, ['assignee', 'status', 'issuetype', complexityField, 'parent']);
+
+    // Batch-resolve each referenced parent Opportunity's type - Jira's
+    // abbreviated `parent` object on a child issue only carries summary/
+    // status/priority/issuetype, not arbitrary custom fields, so this needs
+    // a second query keyed on the parent issue keys we actually saw.
+    const parentKeys = [...new Set(issues.map((i) => i.fields.parent?.key).filter(Boolean))];
+    const parentInfo = new Map();
+    if (parentKeys.length > 0) {
+      const parentJql = `key in (${parentKeys.join(',')})`;
+      const parents = await searchAll(parentJql, ['summary', opportunityTypeField]);
+      for (const p of parents) {
+        parentInfo.set(p.key, {
+          summary: p.fields.summary,
+          opportunityType: p.fields[opportunityTypeField]?.value ?? p.fields[opportunityTypeField] ?? 'Unknown',
+        });
+      }
+    }
 
     const workloadByAssignee = new Map();
     const workItems = [];
@@ -34,31 +80,34 @@ router.get('/api/engineering-workload', async (req, res) => {
 
     for (const issue of issues) {
       const displayName = issue.fields.assignee?.displayName || 'Unassigned';
-      if (EXCLUDED_ASSIGNEES.has(displayName)) continue;
-
       const issueType = issue.fields.issuetype?.name;
       const statusName = issue.fields.status?.name;
-      const complexityValue = issue.fields[COMPLEXITY_FIELD]?.value ?? issue.fields[COMPLEXITY_FIELD] ?? null;
+      const complexityValue = issue.fields[complexityField]?.value ?? issue.fields[complexityField] ?? null;
       const weight = workloadWeight(issueType, complexityValue);
-      const isActive = statusName === 'In Process';
+      const bucket = bucketFor(statusName);
+      const parentKey = issue.fields.parent?.key;
+      const parent = parentKey ? parentInfo.get(parentKey) : null;
 
-      if (isActive) activeCount += 1;
-      else backlogCount += 1;
+      if (bucket === 'active') activeCount += 1;
+      else if (bucket === 'backlog') backlogCount += 1;
 
-      if (!workloadByAssignee.has(displayName)) {
-        workloadByAssignee.set(displayName, { displayName, activeWeight: 0, backlogWeight: 0 });
+      if (bucket !== 'other' && !BULLET_CHART_EXCLUDED_ASSIGNEES.has(displayName)) {
+        if (!workloadByAssignee.has(displayName)) {
+          workloadByAssignee.set(displayName, { displayName, activeWeight: 0, backlogWeight: 0 });
+        }
+        const entry = workloadByAssignee.get(displayName);
+        if (bucket === 'active') entry.activeWeight += weight;
+        else entry.backlogWeight += weight;
       }
-      const entry = workloadByAssignee.get(displayName);
-      if (isActive) entry.activeWeight += weight;
-      else entry.backlogWeight += weight;
 
       workItems.push({
         key: issue.key,
-        opportunitySummary: issue.fields.parent?.fields?.summary || '—',
+        opportunitySummary: parent?.summary || '—',
+        opportunityType: parent?.opportunityType || 'Unknown',
         issueType,
         status: statusName,
-        isActive,
-        complexity: COMPLEXITY_LABELS[complexityValue] || complexityValue || '—',
+        bucket,
+        complexity: complexityValue?.replace(/^\d - /, '') || '—',
         assignee: displayName,
       });
     }

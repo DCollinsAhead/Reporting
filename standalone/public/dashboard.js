@@ -2,12 +2,82 @@
 // /api/* itself, so no base URL or CORS config is needed.
 const REFRESH_INTERVAL_MS = 15 * 60 * 1000;
 
-const STAGE_ORDER = ['To Do', 'In Progress', 'Done'];
-const STAGE_COLOR = {
-  'To Do': 'var(--stage-todo)',
-  'In Progress': 'var(--stage-inprogress)',
-  Done: 'var(--stage-done)',
-};
+// Order and display names taken directly from the source .pbix's
+// Report/definition/pages/pages.json pageOrder - the 3 pages marked
+// "(Draft)" in the source file are left out.
+const REAL_PAGES = [
+  { id: 'opp-overview', title: 'Opportunity Overview', built: true },
+  { id: 'eng-workload', title: 'Engineering Workload', built: true },
+  {
+    id: 'eng-mgr-workload',
+    title: "Engineering Manager's Workload",
+    built: false,
+    visuals: [
+      'Scoped to Curt Petty & Taylor Lewis only',
+      'Workload for Active Projects (bullet chart)',
+      'Workload for Team Assignment (bullet chart)',
+      'Active & Backlog Work Items (column chart + table)',
+    ],
+  },
+  {
+    id: 'eng-staffing',
+    title: 'Engineering Staffing Planning',
+    built: false,
+    visuals: ['Future (Projected) Workload by Assignee (bullet chart)', 'Projects by Assignee (Gantt chart)'],
+  },
+  {
+    id: 'quote-overall',
+    title: 'Overall Quotation Overview',
+    built: false,
+    visuals: ['Quote Qty by Assignee', 'Quote Qty & Completion Trend (Created vs. Time to Completion)'],
+  },
+  {
+    id: 'quote-warehousing',
+    title: 'Warehousing Quoting Overview',
+    built: false,
+    visuals: ['Same as Overall Quotation, filtered to Warehousing/Warehousing+ opportunities'],
+  },
+  {
+    id: 'quote-configuration',
+    title: 'Configuration Quotation',
+    built: false,
+    visuals: ['Same as Overall Quotation, filtered to Staging opportunities'],
+  },
+  {
+    id: 'quote-integration',
+    title: 'Integration Quotation',
+    built: false,
+    visuals: ['Same as Overall Quotation, filtered to Integration opportunities'],
+  },
+  {
+    id: 'quote-ims',
+    title: 'IMS Quotation',
+    built: false,
+    visuals: ['Same as Overall Quotation, filtered to IMS opportunities'],
+  },
+  {
+    id: 'ops-workload',
+    title: 'Operations Workload',
+    built: false,
+    visuals: ['Active/Backlog KPI tiles', 'Workload & Backlog by Assignee (bullet charts)', 'Work Items table'],
+  },
+  {
+    id: 'pgm-workload',
+    title: 'Program Management Workload',
+    built: false,
+    visuals: ['Active/Backlog KPI tiles', 'Workload & Backlog by Assignee (bullet charts)', 'Work Items table'],
+  },
+  {
+    id: 're-tracking',
+    title: 'R&E Issue Tracking',
+    built: false,
+    visuals: [
+      'Production Finding volume over time',
+      'Issue Source, Issue Type, and Systemic? breakdowns (pie charts)',
+      'Production Findings table',
+    ],
+  },
+];
 
 const tooltip = document.getElementById('tooltip');
 
@@ -51,95 +121,12 @@ function barRow({ label, value, max, color, tooltipText }) {
 }
 
 function renderBarChart(container, rows) {
-  container.replaceChildren(...rows.map(barRow));
-}
-
-function renderTable(container, headers, rows) {
-  const table = document.createElement('table');
-  table.className = 'data-table';
-
-  const thead = document.createElement('thead');
-  const headRow = document.createElement('tr');
-  headers.forEach((h) => {
-    const th = document.createElement('th');
-    th.textContent = h;
-    headRow.appendChild(th);
-  });
-  thead.appendChild(headRow);
-
-  const tbody = document.createElement('tbody');
-  rows.forEach((cells) => {
-    const tr = document.createElement('tr');
-    cells.forEach((cell) => {
-      const td = document.createElement('td');
-      td.textContent = cell;
-      tr.appendChild(td);
-    });
-    tbody.appendChild(tr);
-  });
-
-  table.append(thead, tbody);
-  container.replaceChildren(table);
-}
-
-function setupViewToggle(toggleBtn, chartEl, tableEl) {
-  toggleBtn.addEventListener('click', () => {
-    const showingTable = tableEl.style.display !== 'none';
-    tableEl.style.display = showingTable ? 'none' : 'block';
-    chartEl.style.display = showingTable ? 'grid' : 'none';
-    toggleBtn.textContent = showingTable ? 'View as table' : 'View as chart';
-  });
-}
-
-async function fetchJSON(path) {
-  const res = await fetch(path);
-  if (!res.ok) throw new Error(`${path} returned ${res.status}`);
-  return res.json();
-}
-
-function setSectionStatus(el, message, isError) {
-  el.textContent = message;
-  el.className = isError ? 'status-line error' : 'status-line';
-  el.style.display = message ? 'block' : 'none';
-}
-
-async function loadStatusSummary() {
-  const chartEl = document.getElementById('status-chart');
-  const tableEl = document.getElementById('status-table');
-  const statusEl = document.getElementById('status-status');
-
-  try {
-    const data = await fetchJSON('/api/status-summary');
-    const ordered = [...data.statuses].sort((a, b) => {
-      const stageDiff = STAGE_ORDER.indexOf(a.category) - STAGE_ORDER.indexOf(b.category);
-      return stageDiff !== 0 ? stageDiff : b.count - a.count;
-    });
-    const max = Math.max(...ordered.map((s) => s.count), 1);
-
-    renderBarChart(
-      chartEl,
-      ordered.map((s) => ({
-        label: s.status,
-        value: s.count,
-        max,
-        color: STAGE_COLOR[s.category] || 'var(--stage-inprogress)',
-        tooltipText: `${s.status} (${s.category}): ${s.count} issue${s.count === 1 ? '' : 's'}`,
-      }))
-    );
-
-    renderTable(
-      tableEl,
-      ['Status', 'Stage', 'Issues'],
-      ordered.map((s) => [s.status, s.category, s.count])
-    );
-
-    setSectionStatus(statusEl, '', false);
-    return data.updatedAt;
-  } catch (err) {
-    console.error(err);
-    setSectionStatus(statusEl, 'Could not load status summary from Jira.', true);
-    return null;
+  if (rows.length === 0) {
+    container.replaceChildren();
+    return;
   }
+  const max = Math.max(...rows.map((r) => r.value), 1);
+  container.replaceChildren(...rows.map((r) => barRow({ ...r, max })));
 }
 
 // Axis max: smallest "nice" round number at or above the largest bar value,
@@ -210,6 +197,45 @@ function renderBulletChart(container, rows) {
   container.replaceChildren(...rows.map((r) => bulletRow({ ...r, axisMax })));
 }
 
+function renderGroupedChart(container, months, series) {
+  if (months.length === 0) {
+    container.replaceChildren();
+    return;
+  }
+  const max = Math.max(...months.flatMap((m) => series.map((s) => m[s.key])), 1);
+
+  const cols = months.map((m) => {
+    const col = document.createElement('div');
+    col.className = 'grouped-col';
+
+    const bars = document.createElement('div');
+    bars.className = 'grouped-bars';
+    series.forEach((s) => {
+      const value = m[s.key] || 0;
+      const bar = document.createElement('div');
+      bar.className = 'grouped-bar';
+      bar.style.height = `${Math.max((value / max) * 100, value > 0 ? 2 : 0)}%`;
+      bar.style.background = s.color;
+      const label = document.createElement('span');
+      label.className = 'bv';
+      label.textContent = value;
+      bar.appendChild(label);
+      bar.addEventListener('mousemove', (evt) => showTooltip(evt, `${s.label} - ${m.month}: ${value}`));
+      bar.addEventListener('mouseleave', hideTooltip);
+      bars.appendChild(bar);
+    });
+
+    const label = document.createElement('div');
+    label.className = 'grouped-label';
+    label.textContent = m.month;
+
+    col.append(bars, label);
+    return col;
+  });
+
+  container.replaceChildren(...cols);
+}
+
 function renderWorkItemsTable(container, items) {
   const table = document.createElement('table');
   table.className = 'data-table';
@@ -238,7 +264,8 @@ function renderWorkItemsTable(container, items) {
 
     const statusTd = document.createElement('td');
     const pill = document.createElement('span');
-    pill.className = `pill ${item.isActive ? 'pill-active' : 'pill-backlog'}`;
+    const pillClass = item.bucket === 'active' ? 'pill-active' : item.bucket === 'backlog' ? 'pill-backlog' : 'pill-other';
+    pill.className = `pill ${pillClass}`;
     pill.textContent = item.status || '—';
     statusTd.appendChild(pill);
 
@@ -253,30 +280,76 @@ function renderWorkItemsTable(container, items) {
   container.replaceChildren(table);
 }
 
+async function fetchJSON(path) {
+  const res = await fetch(path);
+  if (!res.ok) throw new Error(`${path} returned ${res.status}`);
+  return res.json();
+}
+
+function setSectionStatus(el, message, isError) {
+  el.textContent = message;
+  el.className = isError ? 'status-line error' : 'status-line';
+  el.style.display = message ? 'block' : 'none';
+}
+
+// ---------- Opportunity Overview ----------
+
+async function loadOpportunityOverview() {
+  const statusEl = document.getElementById('opp-type-status');
+  try {
+    const data = await fetchJSON('/api/opportunity-overview');
+
+    renderBarChart(
+      document.getElementById('opp-type-chart'),
+      data.byType.map((t) => ({
+        label: t.type,
+        value: t.count,
+        color: 'var(--ahead-blue)',
+        tooltipText: `${t.type}: ${t.count} opportunities`,
+      }))
+    );
+
+    renderGroupedChart(document.getElementById('opp-trend-chart'), data.trend, [
+      { key: 'Integration', label: 'Integration', color: 'var(--trend-integration)' },
+      { key: 'Staging', label: 'Staging', color: 'var(--trend-staging)' },
+      { key: 'Warehousing', label: 'Warehousing', color: 'var(--trend-warehousing)' },
+    ]);
+
+    setSectionStatus(statusEl, '', false);
+    return data.updatedAt;
+  } catch (err) {
+    console.error(err);
+    setSectionStatus(statusEl, 'Could not load opportunity overview from Jira.', true);
+    return null;
+  }
+}
+
+// ---------- Engineering Workload ----------
+
 let engWorkloadData = null;
-let selectedAssignees = new Set();
+let selectedOpportunityTypes = new Set();
 
 function setAllChipsActive(isActive) {
-  document.querySelectorAll('#eng-workload-slicer .slicer-chip[data-assignee]').forEach((chip) => {
+  document.querySelectorAll('#eng-workload-slicer .slicer-chip[data-type]').forEach((chip) => {
     chip.classList.toggle('active', isActive);
   });
   document.querySelector('#eng-workload-slicer .all-chip').classList.toggle('active', isActive);
 }
 
-function buildSlicerChips(assignees) {
+function buildSlicerChips(types) {
   const container = document.getElementById('eng-workload-slicer');
-  container.querySelectorAll('.slicer-chip[data-assignee]:not(.all-chip)').forEach((el) => el.remove());
+  container.querySelectorAll('.slicer-chip[data-type]:not(.all-chip)').forEach((el) => el.remove());
 
-  assignees.forEach((name) => {
+  types.forEach((type) => {
     const chip = document.createElement('button');
     chip.type = 'button';
     chip.className = 'slicer-chip active';
-    chip.dataset.assignee = name;
-    chip.textContent = name;
+    chip.dataset.type = type;
+    chip.textContent = type;
     chip.addEventListener('click', () => {
-      const isActive = selectedAssignees.has(name);
-      if (isActive) selectedAssignees.delete(name);
-      else selectedAssignees.add(name);
+      const isActive = selectedOpportunityTypes.has(type);
+      if (isActive) selectedOpportunityTypes.delete(type);
+      else selectedOpportunityTypes.add(type);
       chip.classList.toggle('active', !isActive);
       document.querySelector('#eng-workload-slicer .all-chip').classList.remove('active');
       renderEngineeringWorkloadViews();
@@ -288,11 +361,12 @@ function buildSlicerChips(assignees) {
 function renderEngineeringWorkloadViews() {
   if (!engWorkloadData) return;
 
-  const filteredWorkload = engWorkloadData.workload.filter((w) => selectedAssignees.has(w.displayName));
-  const filteredItems = engWorkloadData.workItems.filter((i) => selectedAssignees.has(i.assignee));
+  const filteredItems = engWorkloadData.workItems.filter((i) => selectedOpportunityTypes.has(i.opportunityType));
+  const filteredAssignees = new Set(filteredItems.map((i) => i.assignee));
+  const filteredWorkload = engWorkloadData.workload.filter((w) => filteredAssignees.has(w.displayName));
 
-  document.getElementById('kpi-active-count').textContent = filteredItems.filter((i) => i.isActive).length;
-  document.getElementById('kpi-backlog-count').textContent = filteredItems.filter((i) => !i.isActive).length;
+  document.getElementById('kpi-active-count').textContent = filteredItems.filter((i) => i.bucket === 'active').length;
+  document.getElementById('kpi-backlog-count').textContent = filteredItems.filter((i) => i.bucket === 'backlog').length;
 
   renderBulletChart(
     document.getElementById('workload-chart'),
@@ -326,9 +400,11 @@ async function loadEngineeringWorkload() {
 
   try {
     engWorkloadData = await fetchJSON('/api/engineering-workload');
-    const assignees = engWorkloadData.workload.map((w) => w.displayName).sort((a, b) => a.localeCompare(b));
-    selectedAssignees = new Set(assignees);
-    buildSlicerChips(assignees);
+    const types = [...new Set(engWorkloadData.workItems.map((i) => i.opportunityType))].sort((a, b) =>
+      a.localeCompare(b)
+    );
+    selectedOpportunityTypes = new Set(types);
+    buildSlicerChips(types);
     setAllChipsActive(true);
     setSectionStatus(statusEl, '', false);
     renderEngineeringWorkloadViews();
@@ -342,31 +418,85 @@ async function loadEngineeringWorkload() {
 
 document.querySelector('#eng-workload-slicer .all-chip').addEventListener('click', () => {
   if (!engWorkloadData) return;
-  selectedAssignees = new Set(engWorkloadData.workload.map((w) => w.displayName));
+  selectedOpportunityTypes = new Set(engWorkloadData.workItems.map((i) => i.opportunityType));
   setAllChipsActive(true);
   renderEngineeringWorkloadViews();
 });
 
 document.getElementById('eng-workload-clear').addEventListener('click', () => {
-  selectedAssignees = new Set();
+  selectedOpportunityTypes = new Set();
   setAllChipsActive(false);
   renderEngineeringWorkloadViews();
 });
 
+// ---------- Tab shell ----------
+
+function buildPlaceholderPanel(page) {
+  const section = document.createElement('section');
+  section.className = 'page-panel placeholder';
+  section.id = `page-${page.id}`;
+
+  const card = document.createElement('div');
+  card.className = 'card';
+  const h2 = document.createElement('h2');
+  h2.textContent = page.title;
+  const p = document.createElement('p');
+  p.className = 'sub';
+  p.textContent = 'Not yet built. The source report page contains:';
+  const ul = document.createElement('ul');
+  ul.className = 'placeholder-visual-list';
+  page.visuals.forEach((v) => {
+    const li = document.createElement('li');
+    li.textContent = v;
+    ul.appendChild(li);
+  });
+
+  card.append(h2, p, ul);
+  section.appendChild(card);
+  return section;
+}
+
+function setupTabs() {
+  const tabsNav = document.getElementById('page-tabs');
+  const panelsContainer = document.getElementById('page-panels');
+
+  REAL_PAGES.forEach((page) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'tab-btn';
+    btn.dataset.page = page.id;
+    btn.textContent = page.title;
+    tabsNav.appendChild(btn);
+
+    if (!page.built) {
+      panelsContainer.appendChild(buildPlaceholderPanel(page));
+    }
+  });
+
+  tabsNav.querySelector('.tab-btn').classList.add('active');
+  document.querySelector('.page-panel').classList.add('active');
+
+  tabsNav.addEventListener('click', (evt) => {
+    const btn = evt.target.closest('.tab-btn');
+    if (!btn) return;
+
+    tabsNav.querySelectorAll('.tab-btn').forEach((b) => b.classList.toggle('active', b === btn));
+    panelsContainer.querySelectorAll('.page-panel').forEach((panel) => {
+      panel.classList.toggle('active', panel.id === `page-${btn.dataset.page}`);
+    });
+  });
+}
+
+// ---------- Refresh ----------
+
 async function refreshAll() {
-  const [statusUpdatedAt] = await Promise.all([loadStatusSummary(), loadEngineeringWorkload()]);
+  const [oppUpdatedAt] = await Promise.all([loadOpportunityOverview(), loadEngineeringWorkload()]);
   const stamp = document.getElementById('last-updated');
-  stamp.textContent = statusUpdatedAt
-    ? `Last updated ${new Date(statusUpdatedAt).toLocaleTimeString()}`
-    : 'Last updated -';
+  stamp.textContent = oppUpdatedAt ? `Last updated ${new Date(oppUpdatedAt).toLocaleTimeString()}` : 'Last updated -';
 }
 
 document.getElementById('refresh-btn').addEventListener('click', refreshAll);
-setupViewToggle(
-  document.getElementById('status-toggle'),
-  document.getElementById('status-chart'),
-  document.getElementById('status-table')
-);
 
+setupTabs();
 refreshAll();
 setInterval(refreshAll, REFRESH_INTERVAL_MS);

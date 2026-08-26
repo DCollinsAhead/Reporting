@@ -26,8 +26,4 @@ function workloadWeight(issueType, complexityLevel) {
   return WORKLOAD_WEIGHTS[issueType]?.[complexityLevel] ?? 0;
 }
 
-// Manually excluded from workload/backlog visuals and KPI totals - an
-// editorial rule from the source Power BI report, not a technical one.
-const EXCLUDED_ASSIGNEES = new Set(['Curt Petty']);
-
-module.exports = { WORKLOAD_WEIGHTS, CHILD_ISSUE_TYPES, workloadWeight, EXCLUDED_ASSIGNEES };
+module.exports = { WORKLOAD_WEIGHTS, CHILD_ISSUE_TYPES, workloadWeight };
