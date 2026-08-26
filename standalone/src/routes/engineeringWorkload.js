@@ -30,10 +30,9 @@ const ACTIVE_STATUSES = new Set([
   'Pending Response - Foundry Internal',
 ]);
 
-// Only the Workload by Assignee chart excludes Curt Petty (he gets his own
-// "Engineering Manager's Workload" page) - the Backlog by Assignee chart,
-// KPI totals, and Work Items table do not exclude him.
-const ACTIVE_CHART_EXCLUDED_ASSIGNEES = new Set(['Curt Petty']);
+// Both bullet charts exclude Curt Petty (he gets his own "Engineering
+// Manager's Workload" page) - the KPI totals and Work Items table do not.
+const BULLET_CHART_EXCLUDED_ASSIGNEES = new Set(['Curt Petty']);
 
 router.get('/api/engineering-workload', async (req, res) => {
   const projectKey = process.env.JIRA_PROJECT_KEY || 'FPT';
@@ -54,7 +53,8 @@ router.get('/api/engineering-workload', async (req, res) => {
     const { kpis, workload, workItems } = aggregateWorkload(issues, complexityField, {
       activeStatuses: ACTIVE_STATUSES,
       backlogStatuses: BACKLOG_STATUSES,
-      excludedFromActiveChart: ACTIVE_CHART_EXCLUDED_ASSIGNEES,
+      excludedFromActiveChart: BULLET_CHART_EXCLUDED_ASSIGNEES,
+      excludedFromBacklogChart: BULLET_CHART_EXCLUDED_ASSIGNEES,
       parentInfo,
     });
 
