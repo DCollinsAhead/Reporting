@@ -198,7 +198,7 @@ main {
 
 .bar-row {
   display: grid;
-  grid-template-columns: 180px 1fr 48px;
+  grid-template-columns: minmax(50px, 40%) 1fr minmax(24px, auto);
   align-items: center;
   gap: 10px;
   padding: 4px 0;
@@ -292,6 +292,27 @@ table.data-table th {
 
 .row.cols-2 {
   grid-template-columns: 1fr 1fr;
+}
+
+.row.cols-3 {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+.timeline-track {
+  position: relative;
+  background: var(--surface-alt);
+  border-radius: 4px;
+  height: 14px;
+  min-width: 160px;
+}
+
+.timeline-bar {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  background: var(--ahead-blue);
+  border-radius: 3px;
+  min-width: 3px;
 }
 
 .kpi-row {
@@ -505,7 +526,8 @@ table.data-table th {
 }
 
 @media (max-width: 900px) {
-  .row.cols-2 {
+  .row.cols-2,
+  .row.cols-3 {
     grid-template-columns: 1fr;
   }
 }

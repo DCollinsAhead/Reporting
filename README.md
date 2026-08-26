@@ -69,33 +69,46 @@ charts look like. That caught several real mismatches versus an earlier,
 guessed-at recreation (wrong issue-type list, wrong bucket-to-status
 mapping, an assignee slicer that isn't actually in the source report).
 
-12 non-draft pages exist in the source file, in this order (3 pages marked
-"(Draft)" are excluded):
+All 12 non-draft pages in the source file are now built (3 pages marked
+"(Draft)" are excluded), in the source file's own order:
 
-1. **Opportunity Overview** - built
-2. **Engineering Workload** - built
-3. Engineering Manager's Workload
-4. Engineering Staffing Planning (includes a Gantt chart)
-5. Overall Quotation Overview
-6. Warehousing Quoting Overview
-7. Configuration Quotation
-8. Integration Quotation
-9. IMS Quotation
-10. Operations Workload
-11. Program Management Workload
-12. R&E Issue Tracking (includes pie charts)
+1. Opportunity Overview
+2. Engineering Workload
+3. Engineering Manager's Workload - scoped to Curt Petty & Taylor Lewis; two
+   independent, overlapping status filters (not a clean active/backlog
+   split), so it doesn't reuse the shared workload-aggregation helper
+4. Engineering Staffing Planning - "Projected Workload" (Workload Weight V3
+   gated by an unstarted Start date) plus a simplified timeline in place of
+   the source report's Gantt chart
+5. Overall Quotation Overview, 6. Warehousing, 7. Configuration, 8.
+   Integration, 9. IMS Quotation - one shared `/api/quotation` dataset,
+   filtered per tab client-side; simplified to one monthly-created trend
+   (the source has two overlapping date-range charts) and an approximated
+   Time To Completion (resolved date minus created date - the exact Power
+   BI calculated-column formula wasn't available)
+10. Operations Workload, 11. Program Management Workload - same
+    shape as Engineering Workload, different issue types/status lists,
+    sharing the same backend helper (`standalone/src/workloadAggregation.js`)
+12. R&E Issue Tracking - shown as ranked bars instead of the source
+    report's pie charts (easier to compare at a glance); the Created-date
+    window is an assumed 180 days, not confirmed against the source filter
 
-Pages 3-12 render as an honest "not yet built" placeholder listing that
-page's real visuals, rather than fake data.
+Every custom Jira field (Complexity Level, Opportunity Type, Start/Due date,
+Production Finding Issue Source/Type, Systemic?) is resolved by display name
+at runtime (`getFieldId` in `jiraClient.js`) rather than a hardcoded
+`customfield_NNNNN`, so field-ID drift across Jira instances doesn't matter.
 
 ## Status
 
 - [x] Jira aggregation logic - `server/src/jiraClient.js` (Option A, now
       stale) and `standalone/src/jiraClient.js` (Option B, active)
 - [x] Tab shell matching the source report's page order
-- [x] Opportunity Overview and Engineering Workload built against the
-      `.pbix`'s actual filters, verified end-to-end against mocked Jira data
-- [ ] Pages 3-12 (see above)
+- [x] All 12 non-draft pages built against the `.pbix`'s actual filters,
+      verified end-to-end against mocked Jira data
+- [ ] Verify against real Jira data end to end (only exercised against a
+      mock so far) - watch especially for the R&E date window, the
+      Quotation "Time To Completion" approximation, and any custom field
+      that `getFieldId` can't find by the names assumed here
 - [ ] Pick one architecture (or keep both for different audiences)
 - [ ] Option B: package as a distributable desktop app, if needed beyond
       developers comfortable with `npm start`

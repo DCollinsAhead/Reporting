@@ -1,7 +1,7 @@
 const express = require('express');
 const { searchAll, getFieldId } = require('../jiraClient');
 const cache = require('../cache');
-const { workloadWeight } = require('../workloadWeights');
+const { enrichWithParentOpportunity, aggregateWorkload } = require('../workloadAggregation');
 
 const router = express.Router();
 const CACHE_TTL_SECONDS = Number(process.env.CACHE_TTL_SECONDS || 300);
@@ -35,12 +35,6 @@ const ACTIVE_STATUSES = new Set([
 // do not exclude him, per the source report's own visual-level filters.
 const BULLET_CHART_EXCLUDED_ASSIGNEES = new Set(['Curt Petty']);
 
-function bucketFor(statusName) {
-  if (ACTIVE_STATUSES.has(statusName)) return 'active';
-  if (BACKLOG_STATUSES.has(statusName)) return 'backlog';
-  return 'other';
-}
-
 router.get('/api/engineering-workload', async (req, res) => {
   const projectKey = process.env.JIRA_PROJECT_KEY || 'FPT';
   const cacheKey = `engineering-workload:${projectKey}`;
@@ -56,74 +50,15 @@ router.get('/api/engineering-workload', async (req, res) => {
     const jql = `project = ${projectKey} AND resolution = Unresolved AND issuetype in (${typeList})`;
     const issues = await searchAll(jql, ['assignee', 'status', 'issuetype', complexityField, 'parent']);
 
-    // Batch-resolve each referenced parent Opportunity's type - Jira's
-    // abbreviated `parent` object on a child issue only carries summary/
-    // status/priority/issuetype, not arbitrary custom fields, so this needs
-    // a second query keyed on the parent issue keys we actually saw.
-    const parentKeys = [...new Set(issues.map((i) => i.fields.parent?.key).filter(Boolean))];
-    const parentInfo = new Map();
-    if (parentKeys.length > 0) {
-      const parentJql = `key in (${parentKeys.join(',')})`;
-      const parents = await searchAll(parentJql, ['summary', opportunityTypeField]);
-      for (const p of parents) {
-        parentInfo.set(p.key, {
-          summary: p.fields.summary,
-          opportunityType: p.fields[opportunityTypeField]?.value ?? p.fields[opportunityTypeField] ?? 'Unknown',
-        });
-      }
-    }
+    const parentInfo = await enrichWithParentOpportunity(issues, opportunityTypeField);
+    const { kpis, workload, workItems } = aggregateWorkload(issues, complexityField, {
+      activeStatuses: ACTIVE_STATUSES,
+      backlogStatuses: BACKLOG_STATUSES,
+      excludedFromCharts: BULLET_CHART_EXCLUDED_ASSIGNEES,
+      parentInfo,
+    });
 
-    const workloadByAssignee = new Map();
-    const workItems = [];
-    let activeCount = 0;
-    let backlogCount = 0;
-
-    for (const issue of issues) {
-      const displayName = issue.fields.assignee?.displayName || 'Unassigned';
-      const issueType = issue.fields.issuetype?.name;
-      const statusName = issue.fields.status?.name;
-      const complexityValue = issue.fields[complexityField]?.value ?? issue.fields[complexityField] ?? null;
-      const weight = workloadWeight(issueType, complexityValue);
-      const bucket = bucketFor(statusName);
-      const parentKey = issue.fields.parent?.key;
-      const parent = parentKey ? parentInfo.get(parentKey) : null;
-
-      if (bucket === 'active') activeCount += 1;
-      else if (bucket === 'backlog') backlogCount += 1;
-
-      if (bucket !== 'other' && !BULLET_CHART_EXCLUDED_ASSIGNEES.has(displayName)) {
-        if (!workloadByAssignee.has(displayName)) {
-          workloadByAssignee.set(displayName, { displayName, activeWeight: 0, backlogWeight: 0 });
-        }
-        const entry = workloadByAssignee.get(displayName);
-        if (bucket === 'active') entry.activeWeight += weight;
-        else entry.backlogWeight += weight;
-      }
-
-      workItems.push({
-        key: issue.key,
-        opportunitySummary: parent?.summary || '—',
-        opportunityType: parent?.opportunityType || 'Unknown',
-        issueType,
-        status: statusName,
-        bucket,
-        complexity: complexityValue?.replace(/^\d - /, '') || '—',
-        assignee: displayName,
-      });
-    }
-
-    const payload = {
-      project: projectKey,
-      kpis: { activeCount, backlogCount },
-      workload: [...workloadByAssignee.values()].map((w) => ({
-        displayName: w.displayName,
-        activeWeight: Math.round(w.activeWeight * 100) / 100,
-        backlogWeight: Math.round(w.backlogWeight * 100) / 100,
-      })),
-      workItems,
-      updatedAt: new Date().toISOString(),
-    };
-
+    const payload = { project: projectKey, kpis, workload, workItems, updatedAt: new Date().toISOString() };
     cache.set(cacheKey, payload, CACHE_TTL_SECONDS);
     res.json(payload);
   } catch (err) {
