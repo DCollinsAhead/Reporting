@@ -33,11 +33,28 @@ function bucketFor(statusName, activeStatuses, backlogStatuses) {
 // active/backlog/other by that page's own status lists (these differ
 // page-to-page in the source report - not a bug, just how each page's
 // filters were authored), aggregated per assignee for the bullet charts.
-function aggregateWorkload(issues, complexityField, { activeStatuses, backlogStatuses, excludedFromCharts = new Set(), parentInfo = new Map() }) {
+function aggregateWorkload(
+  issues,
+  complexityField,
+  {
+    activeStatuses,
+    backlogStatuses,
+    excludedFromActiveChart = new Set(),
+    excludedFromBacklogChart = new Set(),
+    parentInfo = new Map(),
+  }
+) {
   const workloadByAssignee = new Map();
   const workItems = [];
   let activeCount = 0;
   let backlogCount = 0;
+
+  const ensureEntry = (displayName) => {
+    if (!workloadByAssignee.has(displayName)) {
+      workloadByAssignee.set(displayName, { displayName, activeWeight: 0, backlogWeight: 0 });
+    }
+    return workloadByAssignee.get(displayName);
+  };
 
   for (const issue of issues) {
     const displayName = issue.fields.assignee?.displayName || 'Unassigned';
@@ -49,16 +66,15 @@ function aggregateWorkload(issues, complexityField, { activeStatuses, backlogSta
     const parentKey = issue.fields.parent?.key;
     const parent = parentKey ? parentInfo.get(parentKey) : null;
 
-    if (bucket === 'active') activeCount += 1;
-    else if (bucket === 'backlog') backlogCount += 1;
-
-    if (bucket !== 'other' && !excludedFromCharts.has(displayName)) {
-      if (!workloadByAssignee.has(displayName)) {
-        workloadByAssignee.set(displayName, { displayName, activeWeight: 0, backlogWeight: 0 });
-      }
-      const entry = workloadByAssignee.get(displayName);
-      if (bucket === 'active') entry.activeWeight += weight;
-      else entry.backlogWeight += weight;
+    // The two bullet charts can exclude different assignees (e.g. a manager
+    // left out of the active-workload view but still shown in backlog) -
+    // each bucket checks its own exclusion set independently.
+    if (bucket === 'active') {
+      activeCount += 1;
+      if (!excludedFromActiveChart.has(displayName)) ensureEntry(displayName).activeWeight += weight;
+    } else if (bucket === 'backlog') {
+      backlogCount += 1;
+      if (!excludedFromBacklogChart.has(displayName)) ensureEntry(displayName).backlogWeight += weight;
     }
 
     workItems.push({

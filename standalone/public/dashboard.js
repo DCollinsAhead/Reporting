@@ -339,8 +339,10 @@ const WORKLOAD_PAGES = [
     apiPath: '/api/engineering-workload',
     activeLabel: 'Active Work Items',
     backlogLabel: 'Backlog Work Items',
-    activeSub: 'Awaiting Parts, In Process, On Hold, Pending Response',
+    activeSub:
+      'Child Issue Type: Configuration/Integration Execution, Configuration Sustainment, Integration Finalization, Meta Integration Review. Resolution: Unresolved. Assignee is not Curt Petty. Status: Awaiting Parts, In Process, On Hold, Pending Response - Account Team/Customer, Pending Response - Foundry Internal.',
     backlogSub: 'New, Pending Assignment, Assigned',
+    hasSlicer: false,
   },
   {
     id: 'ops-workload',
@@ -371,7 +373,9 @@ function buildWorkloadPanel(cfg) {
   section.id = `page-${cfg.id}`;
 
   const card = buildCard(cfg.title, cfg.subtitle);
-  card.appendChild(buildSlicerBox(`${cfg.id}-slicer`, `${cfg.id}-clear`, 'Opportunity Type'));
+  if (cfg.hasSlicer !== false) {
+    card.appendChild(buildSlicerBox(`${cfg.id}-slicer`, `${cfg.id}-clear`, 'Opportunity Type'));
+  }
   card.appendChild(el('div', 'status-line', '')).id = `${cfg.id}-status`;
   card.appendChild(
     buildKpiRow([
@@ -389,7 +393,10 @@ function buildWorkloadPanel(cfg) {
 
   const tablePanel = el('div', 'panel');
   tablePanel.style.marginTop = '18px';
-  tablePanel.append(el('h3', null, 'Work Items'), el('div', 'sub', 'Filtered by the Opportunity Type slicer above'));
+  tablePanel.append(
+    el('h3', null, 'Work Items'),
+    el('div', 'sub', cfg.hasSlicer !== false ? 'Filtered by the Opportunity Type slicer above' : '')
+  );
   const tableScroll = el('div');
   tableScroll.style.maxHeight = '480px';
   tableScroll.style.overflowY = 'auto';
@@ -401,20 +408,22 @@ function buildWorkloadPanel(cfg) {
   card.append(chartsRow, tablePanel);
   section.appendChild(card);
 
-  section.querySelector(`#${cfg.id}-slicer .all-chip`).addEventListener('click', () => {
-    const state = workloadPageState.get(cfg.id);
-    if (!state?.data) return;
-    state.selected = new Set(state.data.workItems.map((i) => i.opportunityType));
-    setAllChipsActive(`${cfg.id}-slicer`, true);
-    renderWorkloadPanel(cfg);
-  });
-  section.querySelector(`#${cfg.id}-clear`).addEventListener('click', () => {
-    const state = workloadPageState.get(cfg.id);
-    if (!state) return;
-    state.selected = new Set();
-    setAllChipsActive(`${cfg.id}-slicer`, false);
-    renderWorkloadPanel(cfg);
-  });
+  if (cfg.hasSlicer !== false) {
+    section.querySelector(`#${cfg.id}-slicer .all-chip`).addEventListener('click', () => {
+      const state = workloadPageState.get(cfg.id);
+      if (!state?.data) return;
+      state.selected = new Set(state.data.workItems.map((i) => i.opportunityType));
+      setAllChipsActive(`${cfg.id}-slicer`, true);
+      renderWorkloadPanel(cfg);
+    });
+    section.querySelector(`#${cfg.id}-clear`).addEventListener('click', () => {
+      const state = workloadPageState.get(cfg.id);
+      if (!state) return;
+      state.selected = new Set();
+      setAllChipsActive(`${cfg.id}-slicer`, false);
+      renderWorkloadPanel(cfg);
+    });
+  }
 
   return section;
 }
@@ -424,7 +433,7 @@ function renderWorkloadPanel(cfg) {
   if (!state?.data) return;
   const { data, selected } = state;
 
-  const filteredItems = data.workItems.filter((i) => selected.has(i.opportunityType));
+  const filteredItems = cfg.hasSlicer === false ? data.workItems : data.workItems.filter((i) => selected.has(i.opportunityType));
   const filteredAssignees = new Set(filteredItems.map((i) => i.assignee));
   const filteredWorkload = data.workload.filter((w) => filteredAssignees.has(w.displayName));
 
@@ -461,13 +470,15 @@ async function loadWorkloadPanel(cfg) {
     const data = await fetchJSON(cfg.apiPath);
     const types = [...new Set(data.workItems.map((i) => i.opportunityType))].sort((a, b) => a.localeCompare(b));
     workloadPageState.set(cfg.id, { data, selected: new Set(types) });
-    buildSlicerChips(`${cfg.id}-slicer`, types, (value, isNowSelected) => {
-      const state = workloadPageState.get(cfg.id);
-      if (isNowSelected) state.selected.add(value);
-      else state.selected.delete(value);
-      renderWorkloadPanel(cfg);
-    });
-    setAllChipsActive(`${cfg.id}-slicer`, true);
+    if (cfg.hasSlicer !== false) {
+      buildSlicerChips(`${cfg.id}-slicer`, types, (value, isNowSelected) => {
+        const state = workloadPageState.get(cfg.id);
+        if (isNowSelected) state.selected.add(value);
+        else state.selected.delete(value);
+        renderWorkloadPanel(cfg);
+      });
+      setAllChipsActive(`${cfg.id}-slicer`, true);
+    }
     setSectionStatus(statusEl, '', false);
     renderWorkloadPanel(cfg);
     return data.updatedAt;
