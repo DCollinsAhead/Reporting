@@ -18,16 +18,19 @@ const ENGINEERING_ISSUE_TYPES = [
   'Meta Integration Review',
 ];
 
-// The two bullet charts on this page use slightly different status lists
-// (one adds "Pending Response - Foundry Internal") - using the union as the
-// canonical "Active" bucket rather than picking one arbitrarily.
+// "Active" status list, explicitly set to match both the "Active Work
+// Items" KPI and the "Workload by Assignee" chart - they share this same
+// set (see aggregateWorkload's activeStatuses param), so keeping one list
+// here keeps both in sync by construction.
 const BACKLOG_STATUSES = new Set(['New', 'Pending Assignment', 'Assigned']);
 const ACTIVE_STATUSES = new Set([
-  'Awaiting Parts',
   'In Process',
+  'Awaiting Parts',
   'On Hold',
   'Pending Response - Account Team/Customer',
   'Pending Response - Foundry Internal',
+  'Follow-up',
+  'Systemic Resolution In Process',
 ]);
 
 // Both bullet charts exclude Curt Petty (he gets his own "Engineering
