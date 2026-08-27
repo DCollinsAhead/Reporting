@@ -327,10 +327,7 @@ function buildOpportunityOverviewPanel() {
   typeChart.id = 'opp-type-chart';
   typeCard.appendChild(typeChart);
 
-  const trendCard = buildCard(
-    'Opportunity Volume Over Time',
-    'New opportunities created per month - Integration, Staging, Warehousing only, last 2 years'
-  );
+  const trendCard = buildCard('Opportunity Volume Over Time');
   const legend = el('div', 'legend');
   [
     ['Integration', 'var(--trend-integration)'],
