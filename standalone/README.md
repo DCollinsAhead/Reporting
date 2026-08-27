@@ -32,7 +32,7 @@ that has read access to the FPT project. Never commit `.env`.
 
 This opens `http://localhost:4287` (or whatever `PORT` you set) in your
 browser. Leave the terminal running - closing it stops the server. The page
-auto-refreshes every 15 minutes and has a manual "Refresh now" button.
+auto-refreshes every 10 minutes and has a manual "Refresh now" button.
 
 ## How this compares to `../server` + `../dashboard`
 
