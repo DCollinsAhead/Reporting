@@ -376,6 +376,10 @@ table.data-table td a:hover {
   padding: 18px 20px;
 }
 
+.panel-accent {
+  border-color: #1c4cbf;
+}
+
 .panel h3 {
   margin: 0 0 3px;
   font-size: 0.9rem;

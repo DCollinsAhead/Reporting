@@ -447,7 +447,7 @@ function buildWorkloadPanel(cfg) {
   );
 
   const chartsRow = el('div', 'row cols-2');
-  const activePanel = el('div', 'panel');
+  const activePanel = el('div', cfg.id === 'eng-workload' ? 'panel panel-accent' : 'panel');
   const workloadHeading =
     cfg.id === 'eng-workload'
       ? el('h3', 'panel-header-banner', 'Workload by Assignee')
