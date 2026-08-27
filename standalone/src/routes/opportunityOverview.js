@@ -9,8 +9,11 @@ const CACHE_TTL_SECONDS = Number(process.env.CACHE_TTL_SECONDS || 300);
 // rolling 2-year window - a Power BI RelativeDate filter on Created:
 // DateAdd(Now(), -2, TimeUnit.Year) through Now(). (TimeUnit 3 in the PBIR
 // filter JSON is Year, not Month - easy to misread since Month is 2.)
+// JQL's relative-date shorthand only supports m/h/d/w units (no "y" for
+// years - that's rejected outright), so the 2-year window is expressed in
+// days here.
 const TREND_TYPES = ['Integration', 'Staging', 'Warehousing'];
-const TREND_WINDOW_YEARS = 2;
+const TREND_WINDOW_DAYS = 730;
 
 router.get('/api/opportunity-overview', async (req, res) => {
   const projectKey = process.env.JIRA_PROJECT_KEY || 'FPT';
@@ -35,7 +38,7 @@ router.get('/api/opportunity-overview', async (req, res) => {
 
     const trendTypeList = TREND_TYPES.map((t) => `"${t}"`).join(',');
     const trendIssues = await searchAll(
-      `project = ${projectKey} AND issuetype = Opportunity AND "Opportunity Type" in (${trendTypeList}) AND created >= -${TREND_WINDOW_YEARS}y`,
+      `project = ${projectKey} AND issuetype = Opportunity AND "Opportunity Type" in (${trendTypeList}) AND created >= -${TREND_WINDOW_DAYS}d`,
       ['created', opportunityTypeField]
     );
 
