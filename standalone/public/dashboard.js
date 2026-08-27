@@ -208,7 +208,17 @@ function renderTotalLineOverlay(container, cols, months, max, totalLine, formatL
   const points = cols.map((col, i) => {
     const barsRect = col.querySelector('.grouped-bars').getBoundingClientRect();
     const value = totalLine.getValue(months[i]);
-    const x = barsRect.left + barsRect.width / 2 - containerRect.left;
+    // getBoundingClientRect() is viewport-relative, so it reflects whatever
+    // the container's *current* scroll position happens to be - but the SVG
+    // overlay is absolutely positioned against the container's unscrolled
+    // content origin. Adding scrollLeft back converts "where this bar is on
+    // screen right now" into "where this bar sits in the full scrollable
+    // content", which is what the overlay's coordinates need. Without this,
+    // the line renders correctly only when scrollLeft happens to be 0 at
+    // render time - it drifts left by the scroll offset on every render
+    // after the chart defaults to scrolled-right (i.e. every render after
+    // the first, since that scroll position persists across re-renders).
+    const x = barsRect.left + barsRect.width / 2 - containerRect.left + container.scrollLeft;
     const yBottom = barsRect.bottom - containerRect.top;
     const y = yBottom - (value / max) * barsRect.height;
     return { x, y, value };
