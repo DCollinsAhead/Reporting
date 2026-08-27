@@ -84,7 +84,7 @@ button.refresh:hover {
 }
 
 .page-tabs {
-  max-width: 1000px;
+  max-width: 1400px;
   margin: 0 auto;
   padding: 16px 32px 0;
   display: flex;
@@ -116,7 +116,7 @@ button.refresh:hover {
 }
 
 main {
-  max-width: 1000px;
+  max-width: 1400px;
   margin: 0 auto;
   padding: 24px 32px 48px;
 }

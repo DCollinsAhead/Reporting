@@ -409,6 +409,9 @@ function buildWorkloadPanel(cfg) {
   if (cfg.hasSlicer !== false) {
     card.appendChild(buildSlicerBox(`${cfg.id}-slicer`, `${cfg.id}-clear`, 'Opportunity Type'));
   }
+  if (cfg.hasAssigneeSlicer) {
+    card.appendChild(buildSlicerBox(`${cfg.id}-assignee-slicer`, `${cfg.id}-assignee-clear`, 'Assignee'));
+  }
   card.appendChild(el('div', 'status-line', '')).id = `${cfg.id}-status`;
   card.appendChild(
     buildKpiRow([
@@ -430,9 +433,6 @@ function buildWorkloadPanel(cfg) {
     el('h3', null, cfg.tableTitle ?? 'Work Items'),
     el('div', 'sub', cfg.hasSlicer !== false ? 'Filtered by the Opportunity Type slicer above' : '')
   );
-  if (cfg.hasAssigneeSlicer) {
-    tablePanel.appendChild(buildSlicerBox(`${cfg.id}-assignee-slicer`, `${cfg.id}-assignee-clear`, 'Assignee'));
-  }
   const tableScroll = el('div', 'table-scroll');
   tableScroll.style.maxHeight = '480px';
   tableScroll.style.overflowY = 'auto';
@@ -486,7 +486,10 @@ function renderWorkloadPanel(cfg) {
   if (!state?.data) return;
   const { data, selected } = state;
 
-  const filteredItems = cfg.hasSlicer === false ? data.workItems : data.workItems.filter((i) => selected.has(i.opportunityType));
+  let filteredItems = cfg.hasSlicer === false ? data.workItems : data.workItems.filter((i) => selected.has(i.opportunityType));
+  if (cfg.hasAssigneeSlicer) {
+    filteredItems = filteredItems.filter((i) => state.assigneeSelected.has(i.assignee));
+  }
   const filteredAssignees = new Set(filteredItems.map((i) => i.assignee));
   const filteredWorkload = data.workload.filter((w) => filteredAssignees.has(w.displayName));
 
@@ -511,11 +514,7 @@ function renderWorkloadPanel(cfg) {
     bulletOpts
   );
 
-  const tableItems = cfg.hasAssigneeSlicer
-    ? filteredItems.filter((i) => state.assigneeSelected.has(i.assignee))
-    : filteredItems;
-
-  renderWorkItemsTable(document.getElementById(`${cfg.id}-table`), tableItems, [
+  renderWorkItemsTable(document.getElementById(`${cfg.id}-table`), filteredItems, [
     { key: 'key', header: 'Ticket', link: cfg.id === 'eng-workload' },
     { key: 'opportunitySummary', header: 'Opportunity Summary' },
     { key: 'issueType', header: 'Issue Type' },
