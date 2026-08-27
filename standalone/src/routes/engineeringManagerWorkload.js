@@ -13,7 +13,10 @@ const CACHE_TTL_SECONDS = Number(process.env.CACHE_TTL_SECONDS || 300);
 // exclusions (not a clean active/backlog partition), so this route doesn't
 // go through the shared aggregateWorkload helper.
 const MANAGERS = ['Curt Petty', 'Taylor Lewis'];
-const EXCLUDE_ACTIVE_PROJECTS = new Set(['Assigned', 'Cancelled', 'Complete', 'Pending Assignment', 'Not Required']);
+// Explicit inclusion list for "Workload for Active Projects" (per explicit
+// request) - Curt Petty/Taylor Lewis scoping already comes from the JQL
+// query below, which covers every chart on this page.
+const ACTIVE_PROJECTS_STATUSES = new Set(['In Process', 'New', 'On Hold']);
 const EXCLUDE_TEAM_ASSIGNMENT = new Set(['Cancelled', 'Complete', 'In Process', 'Pending Assignment']);
 
 router.get('/api/engineering-manager-workload', async (req, res) => {
@@ -48,7 +51,7 @@ router.get('/api/engineering-manager-workload', async (req, res) => {
       const parent = parentKey ? parentInfo.get(parentKey) : null;
       const isUnresolved = issue.fields.resolution == null;
 
-      if (!EXCLUDE_ACTIVE_PROJECTS.has(statusName)) {
+      if (ACTIVE_PROJECTS_STATUSES.has(statusName)) {
         activeProjects.set(displayName, (activeProjects.get(displayName) || 0) + weight);
       }
       if (!EXCLUDE_TEAM_ASSIGNMENT.has(statusName)) {

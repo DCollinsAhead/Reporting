@@ -703,8 +703,8 @@ function buildEngManagerWorkloadPanel() {
   card.appendChild(el('div', 'status-line', '')).id = 'eng-mgr-status';
 
   const chartsRow = el('div', 'row cols-2');
-  const activePanel = el('div', 'panel');
-  activePanel.append(el('h3', null, 'Workload for Active Projects'), Object.assign(el('div'), { id: 'eng-mgr-active-chart' }));
+  const activePanel = el('div', 'panel panel-accent');
+  activePanel.append(el('h3', 'panel-header-banner', 'Workload for Active Projects'), Object.assign(el('div'), { id: 'eng-mgr-active-chart' }));
   const teamPanel = el('div', 'panel');
   teamPanel.append(el('h3', null, 'Workload for Team Assignment'), Object.assign(el('div'), { id: 'eng-mgr-team-chart' }));
   chartsRow.append(activePanel, teamPanel);
@@ -739,7 +739,8 @@ async function loadEngManagerWorkload() {
       data.activeProjects
         .filter((w) => w.weight > 0)
         .sort((a, b) => b.weight - a.weight)
-        .map((w) => ({ label: w.displayName, value: w.weight, tooltipText: `${w.displayName}: ${w.weight} weighted` }))
+        .map((w) => ({ label: w.displayName, value: w.weight, tooltipText: `${w.displayName}: ${w.weight} weighted` })),
+      { bands: WORKLOAD_BULLET_BANDS, axisMax: WORKLOAD_BULLET_AXIS_MAX }
     );
     renderBulletChart(
       document.getElementById('eng-mgr-team-chart'),
