@@ -448,7 +448,11 @@ function buildWorkloadPanel(cfg) {
 
   const chartsRow = el('div', 'row cols-2');
   const activePanel = el('div', 'panel');
-  activePanel.append(el('h3', null, 'Workload by Assignee'), Object.assign(el('div'), { id: `${cfg.id}-workload-chart` }));
+  const workloadHeading =
+    cfg.id === 'eng-workload'
+      ? el('h3', 'panel-header-banner', 'Workload by Assignee')
+      : el('h3', null, 'Workload by Assignee');
+  activePanel.append(workloadHeading, Object.assign(el('div'), { id: `${cfg.id}-workload-chart` }));
   const backlogPanel = el('div', 'panel');
   backlogPanel.append(el('h3', null, 'Backlog by Assignee'), Object.assign(el('div'), { id: `${cfg.id}-backlog-chart` }));
   chartsRow.append(activePanel, backlogPanel);

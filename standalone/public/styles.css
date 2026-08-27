@@ -325,6 +325,16 @@ table.data-table td a:hover {
   font-size: 2.3rem;
 }
 
+/* Same blue as .page-banner, sized down to sit as a chart panel's own
+   header - negative margins let it bleed to the panel's edges/corners. */
+.panel-header-banner {
+  background: #1c4cbf;
+  color: #fff;
+  margin: -18px -20px 16px;
+  padding: 12px 20px;
+  border-radius: 12px 12px 0 0;
+}
+
 .row {
   display: grid;
   gap: 18px;
