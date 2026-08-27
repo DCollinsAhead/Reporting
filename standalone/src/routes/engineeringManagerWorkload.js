@@ -1,5 +1,5 @@
 const express = require('express');
-const { searchAll, getFieldId } = require('../jiraClient');
+const { searchAll, getFieldId, getAccountId } = require('../jiraClient');
 const cache = require('../cache');
 const { enrichWithParentOpportunity } = require('../workloadAggregation');
 const { workloadWeight } = require('../workloadWeights');
@@ -30,7 +30,12 @@ router.get('/api/engineering-manager-workload', async (req, res) => {
     const complexityField = await getFieldId('Complexity Level');
     const opportunityTypeField = await getFieldId('Opportunity Type');
 
-    const managerList = MANAGERS.map((m) => `"${m}"`).join(',');
+    // "assignee in (display names)" is unreliable in Jira Cloud JQL - it can
+    // silently resolve to 0 issues for a real, active user (confirmed on
+    // this instance for "Curt Petty" despite 535 real issues). accountId is
+    // the only correctly-typed way to reference a user in JQL.
+    const managerAccountIds = await Promise.all(MANAGERS.map((name) => getAccountId(name)));
+    const managerList = managerAccountIds.map((id) => `"${id}"`).join(',');
     const jql = `project = ${projectKey} AND assignee in (${managerList})`;
     const issues = await searchAll(jql, ['assignee', 'status', 'issuetype', complexityField, 'parent', 'resolution']);
 

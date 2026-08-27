@@ -111,4 +111,21 @@ async function getFieldId(displayName) {
   return id;
 }
 
-module.exports = { countIssues, searchAll, getProjectStatuses, getFieldId };
+// Resolves a user's accountId by display name. Jira Cloud's JQL "assignee ="
+// with a bare display-name string is unreliable - confirmed empirically on
+// this instance: `assignee = "Curt Petty"` returns 0 issues for a real,
+// active user with 535 issues, while the equivalent accountId-based query
+// returns all of them. accountId is the only reliably-typed way to
+// reference a user in JQL, so any assignee-name filter must resolve to it
+// first rather than interpolating the display name directly.
+let userNameToAccountId = new Map();
+async function getAccountId(displayName) {
+  if (userNameToAccountId.has(displayName)) return userNameToAccountId.get(displayName);
+  const users = await jiraFetch('/rest/api/3/user/search', { query: displayName });
+  const match = users.find((u) => u.displayName === displayName) || users[0];
+  if (!match) throw new Error(`Jira user not found: "${displayName}"`);
+  userNameToAccountId.set(displayName, match.accountId);
+  return match.accountId;
+}
+
+module.exports = { countIssues, searchAll, getProjectStatuses, getFieldId, getAccountId };
