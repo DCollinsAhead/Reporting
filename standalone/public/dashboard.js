@@ -329,7 +329,7 @@ function buildOpportunityOverviewPanel() {
 
   const trendCard = buildCard(
     'Opportunity Volume Over Time',
-    'New opportunities created per month - Integration, Staging, Warehousing only, last ~2 months'
+    'New opportunities created per month - Integration, Staging, Warehousing only, last 2 years'
   );
   const legend = el('div', 'legend');
   [

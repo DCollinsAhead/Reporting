@@ -6,9 +6,11 @@ const router = express.Router();
 const CACHE_TTL_SECONDS = Number(process.env.CACHE_TTL_SECONDS || 300);
 
 // The source report's trend chart only tracks these three types and uses a
-// rolling ~2-month window (a Power BI RelativeDate filter: last 2 months).
+// rolling 2-year window - a Power BI RelativeDate filter on Created:
+// DateAdd(Now(), -2, TimeUnit.Year) through Now(). (TimeUnit 3 in the PBIR
+// filter JSON is Year, not Month - easy to misread since Month is 2.)
 const TREND_TYPES = ['Integration', 'Staging', 'Warehousing'];
-const TREND_WINDOW_DAYS = 60;
+const TREND_WINDOW_YEARS = 2;
 
 router.get('/api/opportunity-overview', async (req, res) => {
   const projectKey = process.env.JIRA_PROJECT_KEY || 'FPT';
@@ -33,7 +35,7 @@ router.get('/api/opportunity-overview', async (req, res) => {
 
     const trendTypeList = TREND_TYPES.map((t) => `"${t}"`).join(',');
     const trendIssues = await searchAll(
-      `project = ${projectKey} AND issuetype = Opportunity AND "Opportunity Type" in (${trendTypeList}) AND created >= -${TREND_WINDOW_DAYS}d`,
+      `project = ${projectKey} AND issuetype = Opportunity AND "Opportunity Type" in (${trendTypeList}) AND created >= -${TREND_WINDOW_YEARS}y`,
       ['created', opportunityTypeField]
     );
 
