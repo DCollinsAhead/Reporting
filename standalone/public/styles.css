@@ -269,6 +269,15 @@ table.data-table th {
   letter-spacing: 0.04em;
 }
 
+/* Keeps the header row pinned while scrolling long tables - opaque
+   background needed so scrolled-under rows don't show through. */
+#eng-workload-table thead th {
+  position: sticky;
+  top: 0;
+  background: #fff;
+  z-index: 1;
+}
+
 table.data-table td a {
   color: var(--ahead-blue);
   text-decoration: none;

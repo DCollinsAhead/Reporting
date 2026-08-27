@@ -379,6 +379,7 @@ const WORKLOAD_PAGES = [
     backlogLabel: 'Backlog Work Items',
     hasSlicer: false,
     tableTitle: '',
+    hasAssigneeSlicer: true,
   },
   {
     id: 'ops-workload',
@@ -429,7 +430,10 @@ function buildWorkloadPanel(cfg) {
     el('h3', null, cfg.tableTitle ?? 'Work Items'),
     el('div', 'sub', cfg.hasSlicer !== false ? 'Filtered by the Opportunity Type slicer above' : '')
   );
-  const tableScroll = el('div');
+  if (cfg.hasAssigneeSlicer) {
+    tablePanel.appendChild(buildSlicerBox(`${cfg.id}-assignee-slicer`, `${cfg.id}-assignee-clear`, 'Assignee'));
+  }
+  const tableScroll = el('div', 'table-scroll');
   tableScroll.style.maxHeight = '480px';
   tableScroll.style.overflowY = 'auto';
   const table = el('table', 'data-table');
@@ -453,6 +457,23 @@ function buildWorkloadPanel(cfg) {
       if (!state) return;
       state.selected = new Set();
       setAllChipsActive(`${cfg.id}-slicer`, false);
+      renderWorkloadPanel(cfg);
+    });
+  }
+
+  if (cfg.hasAssigneeSlicer) {
+    section.querySelector(`#${cfg.id}-assignee-slicer .all-chip`).addEventListener('click', () => {
+      const state = workloadPageState.get(cfg.id);
+      if (!state?.data) return;
+      state.assigneeSelected = new Set(state.data.workItems.map((i) => i.assignee));
+      setAllChipsActive(`${cfg.id}-assignee-slicer`, true);
+      renderWorkloadPanel(cfg);
+    });
+    section.querySelector(`#${cfg.id}-assignee-clear`).addEventListener('click', () => {
+      const state = workloadPageState.get(cfg.id);
+      if (!state) return;
+      state.assigneeSelected = new Set();
+      setAllChipsActive(`${cfg.id}-assignee-slicer`, false);
       renderWorkloadPanel(cfg);
     });
   }
@@ -490,7 +511,11 @@ function renderWorkloadPanel(cfg) {
     bulletOpts
   );
 
-  renderWorkItemsTable(document.getElementById(`${cfg.id}-table`), filteredItems, [
+  const tableItems = cfg.hasAssigneeSlicer
+    ? filteredItems.filter((i) => state.assigneeSelected.has(i.assignee))
+    : filteredItems;
+
+  renderWorkItemsTable(document.getElementById(`${cfg.id}-table`), tableItems, [
     { key: 'key', header: 'Ticket', link: cfg.id === 'eng-workload' },
     { key: 'opportunitySummary', header: 'Opportunity Summary' },
     { key: 'issueType', header: 'Issue Type' },
@@ -504,7 +529,8 @@ async function loadWorkloadPanel(cfg) {
   try {
     const data = await fetchJSON(cfg.apiPath);
     const types = [...new Set(data.workItems.map((i) => i.opportunityType))].sort((a, b) => a.localeCompare(b));
-    workloadPageState.set(cfg.id, { data, selected: new Set(types) });
+    const assignees = [...new Set(data.workItems.map((i) => i.assignee))].sort((a, b) => a.localeCompare(b));
+    workloadPageState.set(cfg.id, { data, selected: new Set(types), assigneeSelected: new Set(assignees) });
     if (cfg.hasSlicer !== false) {
       buildSlicerChips(`${cfg.id}-slicer`, types, (value, isNowSelected) => {
         const state = workloadPageState.get(cfg.id);
@@ -513,6 +539,15 @@ async function loadWorkloadPanel(cfg) {
         renderWorkloadPanel(cfg);
       });
       setAllChipsActive(`${cfg.id}-slicer`, true);
+    }
+    if (cfg.hasAssigneeSlicer) {
+      buildSlicerChips(`${cfg.id}-assignee-slicer`, assignees, (value, isNowSelected) => {
+        const state = workloadPageState.get(cfg.id);
+        if (isNowSelected) state.assigneeSelected.add(value);
+        else state.assigneeSelected.delete(value);
+        renderWorkloadPanel(cfg);
+      });
+      setAllChipsActive(`${cfg.id}-assignee-slicer`, true);
     }
     setSectionStatus(statusEl, '', false);
     renderWorkloadPanel(cfg);
