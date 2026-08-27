@@ -93,10 +93,14 @@ All 12 non-draft pages in the source file are now built (3 pages marked
     report's pie charts (easier to compare at a glance); the Created-date
     window is an assumed 180 days, not confirmed against the source filter
 
-Every custom Jira field (Complexity Level, Opportunity Type, Start/Due date,
-Production Finding Issue Source/Type, Systemic?) is resolved by display name
-at runtime (`getFieldId` in `jiraClient.js`) rather than a hardcoded
-`customfield_NNNNN`, so field-ID drift across Jira instances doesn't matter.
+Most custom Jira fields (Complexity Level, Opportunity Type, Start/Due date,
+Systemic?) are resolved by display name at runtime (`getFieldId` in
+`jiraClient.js`) rather than a hardcoded `customfield_NNNNN`, so field-ID
+drift across Jira instances doesn't matter. The two Production Finding
+fields are the exception: their real display names are the bare "Issue
+Type"/"Issue Source", which collide with the standard `issuetype` field's
+own display name, so they're referenced by hardcoded ID instead (see
+`ISSUE_SOURCE_FIELD`/`ISSUE_TYPE_FIELD` in `reIssueTracking.js`).
 
 ## Jira fields used
 
@@ -118,8 +122,7 @@ at runtime (`getFieldId` in `jiraClient.js`) rather than a hardcoded
 
 Fields marked "resolved by name" go through `getFieldId()` in `jiraClient.js`
 at runtime (looked up by display name against `/rest/api/3/field`, not a
-hardcoded ID) - the four with a listed ID below were provided directly and
-aren't wired into a route yet.
+hardcoded ID).
 
 | Field | Custom field ID | Used by |
 |---|---|---|
@@ -127,8 +130,8 @@ aren't wired into a route yet.
 | Opportunity Type | resolved by name | every page - directly on Opportunity Overview, via the parent Opportunity lookup everywhere else |
 | Start date | resolved by name | Engineering Staffing Planning |
 | Due date | resolved by name | Engineering Staffing Planning |
-| Production Finding Issue Source | resolved by name | R&E Issue Tracking |
-| Production Finding Issue Type | resolved by name | R&E Issue Tracking |
+| Issue Source | `customfield_12690` | R&E Issue Tracking (hardcoded ID - see note above) |
+| Issue Type | `customfield_12689` | R&E Issue Tracking (hardcoded ID - see note above) |
 | Systemic? | resolved by name | R&E Issue Tracking |
 | Number of Devices | `customfield_11834` | not yet used - appears on the (Draft) PgM Dashboard pages, which aren't built |
 | Integrated Racks | `customfield_11699` | not yet used - same draft pages |

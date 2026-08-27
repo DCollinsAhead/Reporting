@@ -11,6 +11,15 @@ const CACHE_TTL_SECONDS = Number(process.env.CACHE_TTL_SECONDS || 300);
 // this page (and the earlier static-HTML recreation) explicitly labels it as.
 const WINDOW_DAYS = 180;
 
+// These two custom field IDs were provided directly (not resolved by name):
+// their real Jira display names are the bare "Issue Type"/"Issue Source",
+// which collides with the standard `issuetype` field's own display name, so
+// getFieldId() can't safely resolve them by name (also, the previously
+// assumed names "Production Finding Issue Source/Type" don't exist at all
+// in this Jira instance - that mismatch was the "field not found" error).
+const ISSUE_SOURCE_FIELD = 'customfield_12690';
+const ISSUE_TYPE_FIELD = 'customfield_12689';
+
 router.get('/api/re-issue-tracking', async (req, res) => {
   const projectKey = process.env.JIRA_PROJECT_KEY || 'FPT';
   const cacheKey = `re-issue-tracking:${projectKey}`;
@@ -20,8 +29,8 @@ router.get('/api/re-issue-tracking', async (req, res) => {
 
   try {
     const opportunityTypeField = await getFieldId('Opportunity Type');
-    const issueSourceField = await getFieldId('Production Finding Issue Source');
-    const findingTypeField = await getFieldId('Production Finding Issue Type');
+    const issueSourceField = ISSUE_SOURCE_FIELD;
+    const findingTypeField = ISSUE_TYPE_FIELD;
     const systemicField = await getFieldId('Systemic?');
 
     const jql = `project = ${projectKey} AND issuetype = "Production Finding" AND created >= -${WINDOW_DAYS}d`;
