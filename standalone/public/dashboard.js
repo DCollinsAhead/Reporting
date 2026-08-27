@@ -446,21 +446,24 @@ function buildWorkloadPanel(cfg) {
     ])
   );
 
+  // Engineering Workload's charts/table panels use the same blue accent
+  // (header band + border) as the page banner, for visual consistency
+  // across the page - other pages keep the plain default panel look.
+  const isAccentPage = cfg.id === 'eng-workload';
+  const accentPanelClass = isAccentPage ? 'panel panel-accent' : 'panel';
+  const accentHeading = (text) => el('h3', isAccentPage ? 'panel-header-banner' : null, text);
+
   const chartsRow = el('div', 'row cols-2');
-  const activePanel = el('div', cfg.id === 'eng-workload' ? 'panel panel-accent' : 'panel');
-  const workloadHeading =
-    cfg.id === 'eng-workload'
-      ? el('h3', 'panel-header-banner', 'Workload by Assignee')
-      : el('h3', null, 'Workload by Assignee');
-  activePanel.append(workloadHeading, Object.assign(el('div'), { id: `${cfg.id}-workload-chart` }));
-  const backlogPanel = el('div', 'panel');
-  backlogPanel.append(el('h3', null, 'Backlog by Assignee'), Object.assign(el('div'), { id: `${cfg.id}-backlog-chart` }));
+  const activePanel = el('div', accentPanelClass);
+  activePanel.append(accentHeading('Workload by Assignee'), Object.assign(el('div'), { id: `${cfg.id}-workload-chart` }));
+  const backlogPanel = el('div', accentPanelClass);
+  backlogPanel.append(accentHeading('Backlog by Assignee'), Object.assign(el('div'), { id: `${cfg.id}-backlog-chart` }));
   chartsRow.append(activePanel, backlogPanel);
 
-  const tablePanel = el('div', 'panel');
+  const tablePanel = el('div', accentPanelClass);
   tablePanel.style.marginTop = '18px';
   tablePanel.append(
-    el('h3', null, cfg.tableTitle ?? 'Work Items'),
+    accentHeading(cfg.tableTitle ?? 'Work Items'),
     el('div', 'sub', cfg.hasSlicer !== false ? 'Filtered by the Opportunity Type slicer above' : '')
   );
   const tableScroll = el('div', 'table-scroll');
