@@ -187,6 +187,9 @@ function renderGroupedChart(container, months, series, opts = {}) {
 
   container.replaceChildren(...cols);
   if (totalLine) renderTotalLineOverlay(container, cols, months, max, totalLine, formatLabel);
+  // Months run oldest -> newest left to right; default the scroll position
+  // to the right edge so the most recent months are visible first.
+  container.scrollLeft = container.scrollWidth;
 }
 
 // Measures the already-rendered bar columns (rather than assuming pixel
