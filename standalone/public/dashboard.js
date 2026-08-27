@@ -143,14 +143,25 @@ function renderBulletChart(container, rows, opts = {}) {
   container.replaceChildren(...rows.map((r) => bulletRow({ ...r, axisMax, bands })));
 }
 
-function renderGroupedChart(container, months, series) {
+// "2026-08" -> "Aug 2026".
+function formatMonthLabel(monthStr) {
+  const [year, month] = monthStr.split('-');
+  return new Date(Number(year), Number(month) - 1, 1).toLocaleDateString('en-US', {
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+function renderGroupedChart(container, months, series, opts = {}) {
   if (months.length === 0) {
     container.replaceChildren();
     return;
   }
+  const formatLabel = opts.formatLabel || ((m) => m.month);
   const max = Math.max(...months.flatMap((m) => series.map((s) => m[s.key])), 1);
 
   const cols = months.map((m) => {
+    const label = formatLabel(m);
     const col = el('div', 'grouped-col');
     const bars = el('div', 'grouped-bars');
     series.forEach((s) => {
@@ -159,11 +170,11 @@ function renderGroupedChart(container, months, series) {
       bar.style.height = `${Math.max((value / max) * 100, value > 0 ? 2 : 0)}%`;
       bar.style.background = s.color;
       bar.appendChild(el('span', 'bv', String(value)));
-      bar.addEventListener('mousemove', (evt) => showTooltip(evt, `${s.label} - ${m.month}: ${value}`));
+      bar.addEventListener('mousemove', (evt) => showTooltip(evt, `${s.label} - ${label}: ${value}`));
       bar.addEventListener('mouseleave', hideTooltip);
       bars.appendChild(bar);
     });
-    col.append(bars, el('div', 'grouped-label', m.month));
+    col.append(bars, el('div', 'grouped-label', label));
     return col;
   });
 
@@ -359,11 +370,16 @@ async function loadOpportunityOverview() {
       data.byType.map((t) => ({ label: t.type, value: t.count, color: 'var(--ahead-blue)', tooltipText: `${t.type}: ${t.count} opportunities` }))
     );
 
-    renderGroupedChart(document.getElementById('opp-trend-chart'), data.trend, [
-      { key: 'Integration', label: 'Integration', color: 'var(--trend-integration)' },
-      { key: 'Staging', label: 'Staging', color: 'var(--trend-staging)' },
-      { key: 'Warehousing', label: 'Warehousing', color: 'var(--trend-warehousing)' },
-    ]);
+    renderGroupedChart(
+      document.getElementById('opp-trend-chart'),
+      data.trend,
+      [
+        { key: 'Integration', label: 'Integration', color: 'var(--trend-integration)' },
+        { key: 'Staging', label: 'Staging', color: 'var(--trend-staging)' },
+        { key: 'Warehousing', label: 'Warehousing', color: 'var(--trend-warehousing)' },
+      ],
+      { formatLabel: (m) => formatMonthLabel(m.month) }
+    );
 
     setSectionStatus(statusEl, '', false);
     return data.updatedAt;
