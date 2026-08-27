@@ -303,6 +303,28 @@ table.data-table td a:hover {
   margin-bottom: 14px;
 }
 
+.page-banner {
+  background: #1c4cbf;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 20px;
+  margin-bottom: 14px;
+}
+
+.page-banner-logo {
+  height: 40px;
+  width: auto;
+  display: block;
+}
+
+.page-banner-label {
+  color: #fff;
+  font-weight: 700;
+  font-size: 1.6rem;
+}
+
 .row {
   display: grid;
   gap: 18px;

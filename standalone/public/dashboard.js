@@ -246,9 +246,23 @@ function renderTimeline(container, items) {
 
 // ---------- Shared UI builders ----------
 
-function buildCard(title, subtitle) {
+// `banner` swaps the plain <h2> title for the AHEAD Foundry logo + page name
+// on a blue rounded band - ground-truthed from the source .pbix's own page
+// header (an image visual + textbox visual over a rectangleRounded shape,
+// fill #1C4CBF) rather than a new design.
+function buildCard(title, subtitle, banner) {
   const card = el('div', 'card');
-  card.appendChild(el('h2', null, title));
+  if (banner) {
+    const bannerEl = el('div', 'page-banner');
+    const logo = document.createElement('img');
+    logo.src = 'assets/foundry-logo-white.png';
+    logo.alt = 'AHEAD Foundry';
+    logo.className = 'page-banner-logo';
+    bannerEl.append(logo, el('span', 'page-banner-label', `- ${banner}`));
+    card.appendChild(bannerEl);
+  } else {
+    card.appendChild(el('h2', null, title));
+  }
   if (subtitle) card.appendChild(el('div', 'sub', subtitle));
   return card;
 }
@@ -379,6 +393,7 @@ const WORKLOAD_PAGES = [
     backlogLabel: 'Backlog Work Items',
     hasSlicer: false,
     tableTitle: '',
+    banner: 'Engineering',
     hasAssigneeSlicer: true,
   },
   {
@@ -405,7 +420,7 @@ function buildWorkloadPanel(cfg) {
   const section = el('section', 'page-panel');
   section.id = `page-${cfg.id}`;
 
-  const card = buildCard(cfg.title, cfg.subtitle);
+  const card = buildCard(cfg.title, cfg.subtitle, cfg.banner);
   if (cfg.hasSlicer !== false) {
     card.appendChild(buildSlicerBox(`${cfg.id}-slicer`, `${cfg.id}-clear`, 'Opportunity Type'));
   }
