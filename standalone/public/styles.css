@@ -289,6 +289,10 @@ table.data-table th {
   z-index: 1;
 }
 
+#eng-workload-table tbody tr:nth-child(even) {
+  background: #eaf1fb;
+}
+
 table.data-table td a {
   color: var(--ahead-blue);
   text-decoration: none;
