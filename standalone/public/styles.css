@@ -25,6 +25,10 @@
   --trend-integration: #009fdc;
   --trend-warehousing: #00b388;
   --trend-staging: #e0a030;
+  /* Total-line overlay on the same chart - a derived sum, not a 4th category,
+     so it gets its own distinct hue rather than extending the categorical
+     set. Validated: worst adjacent CVD delta-E 8.1 vs #00b388 (dataviz skill). */
+  --trend-total: #d6336c;
 }
 
 * {
@@ -194,6 +198,12 @@ main {
   height: 10px;
   border-radius: 3px;
   display: inline-block;
+}
+
+.legend-swatch.line {
+  width: 14px;
+  height: 2px;
+  border-radius: 1px;
 }
 
 .bar-row {
@@ -531,12 +541,20 @@ table.data-table td a:hover {
 }
 
 .grouped-chart {
+  position: relative;
   display: flex;
   align-items: flex-end;
   gap: 16px;
   height: 180px;
   padding-top: 20px;
   overflow-x: auto;
+}
+
+.grouped-chart-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
 }
 
 .grouped-col {
@@ -572,6 +590,13 @@ table.data-table td a:hover {
   font-weight: 600;
   color: var(--ink-primary);
   white-space: nowrap;
+}
+
+.grouped-total-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  fill: var(--ink-primary);
+  font-family: inherit;
 }
 
 .grouped-label {

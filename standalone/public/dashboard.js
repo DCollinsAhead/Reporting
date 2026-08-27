@@ -152,13 +152,20 @@ function formatMonthLabel(monthStr) {
   });
 }
 
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+// Total-line overlay is a derived sum plotted against the *same* axis as the
+// bars (never a second y-scale - dataviz skill), so the shared max below is
+// widened to fit whichever is taller: the tallest single bar, or the total.
 function renderGroupedChart(container, months, series, opts = {}) {
   if (months.length === 0) {
     container.replaceChildren();
     return;
   }
   const formatLabel = opts.formatLabel || ((m) => m.month);
-  const max = Math.max(...months.flatMap((m) => series.map((s) => m[s.key])), 1);
+  const barMax = Math.max(...months.flatMap((m) => series.map((s) => m[s.key])), 1);
+  const totalLine = opts.totalLine;
+  const max = totalLine ? Math.max(barMax, ...months.map(totalLine.getValue), 1) : barMax;
 
   const cols = months.map((m) => {
     const label = formatLabel(m);
@@ -179,6 +186,75 @@ function renderGroupedChart(container, months, series, opts = {}) {
   });
 
   container.replaceChildren(...cols);
+  if (totalLine) renderTotalLineOverlay(container, cols, months, max, totalLine, formatLabel);
+}
+
+// Measures the already-rendered bar columns (rather than assuming pixel
+// values) so the line lands exactly on the shared axis regardless of layout,
+// and scrolls together with the columns when the chart overflows.
+function renderTotalLineOverlay(container, cols, months, max, totalLine, formatLabel) {
+  const containerRect = container.getBoundingClientRect();
+  const width = container.scrollWidth;
+  const height = container.scrollHeight;
+
+  const svg = document.createElementNS(SVG_NS, 'svg');
+  svg.setAttribute('class', 'grouped-chart-overlay');
+  svg.setAttribute('width', width);
+  svg.setAttribute('height', height);
+
+  const points = cols.map((col, i) => {
+    const barsRect = col.querySelector('.grouped-bars').getBoundingClientRect();
+    const value = totalLine.getValue(months[i]);
+    const x = barsRect.left + barsRect.width / 2 - containerRect.left;
+    const yBottom = barsRect.bottom - containerRect.top;
+    const y = yBottom - (value / max) * barsRect.height;
+    return { x, y, value };
+  });
+
+  const polyline = document.createElementNS(SVG_NS, 'polyline');
+  polyline.setAttribute('points', points.map((p) => `${p.x},${p.y}`).join(' '));
+  polyline.setAttribute('fill', 'none');
+  polyline.style.stroke = totalLine.color;
+  polyline.setAttribute('stroke-width', '2');
+  polyline.setAttribute('stroke-linejoin', 'round');
+  polyline.setAttribute('stroke-linecap', 'round');
+  svg.appendChild(polyline);
+
+  points.forEach((p, i) => {
+    const dot = document.createElementNS(SVG_NS, 'circle');
+    dot.setAttribute('cx', p.x);
+    dot.setAttribute('cy', p.y);
+    dot.setAttribute('r', '4');
+    dot.style.fill = totalLine.color;
+    dot.setAttribute('stroke', '#fff');
+    dot.setAttribute('stroke-width', '2');
+
+    // Hit target well past the visible 8px dot (mark spec: >= 24px).
+    const hitArea = document.createElementNS(SVG_NS, 'circle');
+    hitArea.setAttribute('cx', p.x);
+    hitArea.setAttribute('cy', p.y);
+    hitArea.setAttribute('r', '13');
+    hitArea.setAttribute('fill', 'transparent');
+    hitArea.style.pointerEvents = 'auto';
+    const label = formatLabel(months[i]);
+    hitArea.addEventListener('mousemove', (evt) => showTooltip(evt, `${totalLine.label} - ${label}: ${p.value}`));
+    hitArea.addEventListener('mouseleave', hideTooltip);
+
+    svg.append(dot, hitArea);
+  });
+
+  // Direct label only at the endpoint (mark spec: label selectively, not
+  // every point - the axis/tooltip carry the rest).
+  const last = points[points.length - 1];
+  const endLabel = document.createElementNS(SVG_NS, 'text');
+  endLabel.setAttribute('x', last.x);
+  endLabel.setAttribute('y', last.y - 10);
+  endLabel.setAttribute('text-anchor', 'middle');
+  endLabel.setAttribute('class', 'grouped-total-label');
+  endLabel.textContent = String(last.value);
+  svg.appendChild(endLabel);
+
+  container.appendChild(svg);
 }
 
 function renderWorkItemsTable(container, items, columns) {
@@ -341,12 +417,13 @@ function buildOpportunityOverviewPanel() {
   const trendCard = buildCard('Opportunity Volume Over Time');
   const legend = el('div', 'legend');
   [
-    ['Integration', 'var(--trend-integration)'],
-    ['Staging', 'var(--trend-staging)'],
-    ['Warehousing', 'var(--trend-warehousing)'],
-  ].forEach(([label, color]) => {
+    ['Integration', 'var(--trend-integration)', 'bar'],
+    ['Staging', 'var(--trend-staging)', 'bar'],
+    ['Warehousing', 'var(--trend-warehousing)', 'bar'],
+    ['Total Opportunities', 'var(--trend-total)', 'line'],
+  ].forEach(([label, color, mark]) => {
     const item = el('span', 'legend-item');
-    const swatch = el('span', 'legend-swatch');
+    const swatch = el('span', mark === 'line' ? 'legend-swatch line' : 'legend-swatch');
     swatch.style.background = color;
     item.append(swatch, document.createTextNode(label));
     legend.appendChild(item);
@@ -378,7 +455,14 @@ async function loadOpportunityOverview() {
         { key: 'Staging', label: 'Staging', color: 'var(--trend-staging)' },
         { key: 'Warehousing', label: 'Warehousing', color: 'var(--trend-warehousing)' },
       ],
-      { formatLabel: (m) => formatMonthLabel(m.month) }
+      {
+        formatLabel: (m) => formatMonthLabel(m.month),
+        totalLine: {
+          label: 'Total Opportunities',
+          color: 'var(--trend-total)',
+          getValue: (m) => (m.Integration || 0) + (m.Staging || 0) + (m.Warehousing || 0),
+        },
+      }
     );
 
     setSectionStatus(statusEl, '', false);
