@@ -467,7 +467,9 @@ function buildWorkloadPanel(cfg) {
   // the table's own column-name row (see #eng-workload-table thead th).
   const tableHeadingText = cfg.tableTitle ?? 'Work Items';
   if (tableHeadingText) tablePanel.appendChild(el('h3', null, tableHeadingText));
-  tablePanel.appendChild(el('div', 'sub', cfg.hasSlicer !== false ? 'Filtered by the Opportunity Type slicer above' : ''));
+  if (cfg.hasSlicer !== false) {
+    tablePanel.appendChild(el('div', 'sub', 'Filtered by the Opportunity Type slicer above'));
+  }
   const tableScroll = el('div', 'table-scroll');
   tableScroll.style.maxHeight = '480px';
   tableScroll.style.overflowY = 'auto';
