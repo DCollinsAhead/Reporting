@@ -706,12 +706,12 @@ function buildEngManagerWorkloadPanel() {
   const activePanel = el('div', 'panel panel-accent');
   activePanel.append(el('h3', 'panel-header-banner', 'Workload for Active Projects'), Object.assign(el('div'), { id: 'eng-mgr-active-chart' }));
   const teamPanel = el('div', 'panel');
-  teamPanel.append(el('h3', null, 'Workload for Team Assignment'), Object.assign(el('div'), { id: 'eng-mgr-team-chart' }));
+  teamPanel.append(el('h3', null, 'Workload for Assigned Project'), Object.assign(el('div'), { id: 'eng-mgr-team-chart' }));
   chartsRow.append(activePanel, teamPanel);
 
   const pendingPanel = el('div', 'panel');
   pendingPanel.style.marginTop = '18px';
-  pendingPanel.append(el('h3', null, 'Items Pending Assignment'), Object.assign(el('div'), { id: 'eng-mgr-pending-chart' }));
+  pendingPanel.append(el('h3', null, 'Workload Pending Assignment'), Object.assign(el('div'), { id: 'eng-mgr-pending-chart' }));
 
   const tablePanel = el('div', 'panel');
   tablePanel.style.marginTop = '18px';
