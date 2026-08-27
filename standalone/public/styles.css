@@ -305,16 +305,16 @@ table.data-table td a:hover {
 
 .page-banner {
   background: #1c4cbf;
-  border-radius: 12px;
+  border-radius: 14px;
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 12px 20px;
+  gap: 20px;
+  padding: 22px 28px;
   margin-bottom: 14px;
 }
 
 .page-banner-logo {
-  height: 40px;
+  height: 64px;
   width: auto;
   display: block;
 }
@@ -322,7 +322,7 @@ table.data-table td a:hover {
 .page-banner-label {
   color: #fff;
   font-weight: 700;
-  font-size: 1.6rem;
+  font-size: 2.3rem;
 }
 
 .row {
