@@ -1,6 +1,6 @@
 // Same origin as the API - the local server serves this file and answers
 // /api/* itself, so no base URL or CORS config is needed.
-const REFRESH_INTERVAL_MS = 10 * 60 * 1000;
+const REFRESH_INTERVAL_MS = 5 * 60 * 1000;
 const JIRA_BROWSE_BASE = 'https://ahd-foundry.atlassian.net/browse/';
 
 const tooltip = document.getElementById('tooltip');
