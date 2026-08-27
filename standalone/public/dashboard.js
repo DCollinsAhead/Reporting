@@ -386,8 +386,6 @@ const WORKLOAD_PAGES = [
   {
     id: 'eng-workload',
     title: 'Engineering Workload',
-    subtitle:
-      'Unresolved Configuration/Integration Execution & Meta Integration Review issues - weighted by Workload Weight V3. Curt Petty excluded (he has his own Manager\'s Workload page).',
     apiPath: '/api/engineering-workload',
     activeLabel: 'Active Work Items',
     backlogLabel: 'Backlog Work Items',
