@@ -462,10 +462,12 @@ function buildWorkloadPanel(cfg) {
 
   const tablePanel = el('div', accentPanelClass);
   tablePanel.style.marginTop = '18px';
-  tablePanel.append(
-    accentHeading(cfg.tableTitle ?? 'Work Items'),
-    el('div', 'sub', cfg.hasSlicer !== false ? 'Filtered by the Opportunity Type slicer above' : '')
-  );
+  // On Engineering Workload the table has no title text (blanked earlier),
+  // so skip the header band entirely here - the same blue instead lives on
+  // the table's own column-name row (see #eng-workload-table thead th).
+  const tableHeadingText = cfg.tableTitle ?? 'Work Items';
+  if (tableHeadingText) tablePanel.appendChild(el('h3', null, tableHeadingText));
+  tablePanel.appendChild(el('div', 'sub', cfg.hasSlicer !== false ? 'Filtered by the Opportunity Type slicer above' : ''));
   const tableScroll = el('div', 'table-scroll');
   tableScroll.style.maxHeight = '480px';
   tableScroll.style.overflowY = 'auto';

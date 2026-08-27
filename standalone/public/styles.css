@@ -274,7 +274,8 @@ table.data-table th {
 #eng-workload-table thead th {
   position: sticky;
   top: 0;
-  background: #fff;
+  background: #1c4cbf;
+  color: #fff;
   z-index: 1;
 }
 
