@@ -370,7 +370,7 @@ function buildCard(title, subtitle, banner) {
 function buildKpiRow(items) {
   const row = el('div', `row cols-${items.length} kpi-row`);
   items.forEach((item) => {
-    const panel = el('div', 'panel kpi-mini');
+    const panel = el('div', item.accent ? 'panel kpi-mini panel-accent' : 'panel kpi-mini');
     panel.appendChild(el('div', 'val', '-')).id = item.valueId;
     panel.appendChild(el('div', 'lbl', item.label));
     row.appendChild(panel);
@@ -528,6 +528,11 @@ function buildWorkloadPanel(cfg) {
   const section = el('section', 'page-panel');
   section.id = `page-${cfg.id}`;
 
+  // Engineering Workload's KPI tiles/charts/table panels use the same blue
+  // accent (header band + border) as the page banner, for visual
+  // consistency across the page - other pages keep the plain default look.
+  const isAccentPage = cfg.id === 'eng-workload';
+
   const card = buildCard(cfg.title, cfg.subtitle, cfg.banner);
   if (cfg.hasSlicer !== false) {
     card.appendChild(buildSlicerBox(`${cfg.id}-slicer`, `${cfg.id}-clear`, 'Opportunity Type'));
@@ -538,15 +543,11 @@ function buildWorkloadPanel(cfg) {
   card.appendChild(el('div', 'status-line', '')).id = `${cfg.id}-status`;
   card.appendChild(
     buildKpiRow([
-      { valueId: `${cfg.id}-kpi-active`, label: cfg.activeLabel },
-      { valueId: `${cfg.id}-kpi-backlog`, label: cfg.backlogLabel },
+      { valueId: `${cfg.id}-kpi-active`, label: cfg.activeLabel, accent: isAccentPage },
+      { valueId: `${cfg.id}-kpi-backlog`, label: cfg.backlogLabel, accent: isAccentPage },
     ])
   );
 
-  // Engineering Workload's charts/table panels use the same blue accent
-  // (header band + border) as the page banner, for visual consistency
-  // across the page - other pages keep the plain default panel look.
-  const isAccentPage = cfg.id === 'eng-workload';
   const accentPanelClass = isAccentPage ? 'panel panel-accent' : 'panel';
   const accentHeading = (text) => el('h3', isAccentPage ? 'panel-header-banner' : null, text);
 
