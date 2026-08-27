@@ -269,6 +269,15 @@ table.data-table th {
   letter-spacing: 0.04em;
 }
 
+table.data-table td a {
+  color: var(--ahead-blue);
+  text-decoration: none;
+}
+
+table.data-table td a:hover {
+  text-decoration: underline;
+}
+
 .status-line {
   font-size: 0.8rem;
   color: var(--ink-muted);

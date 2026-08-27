@@ -1,6 +1,7 @@
 // Same origin as the API - the local server serves this file and answers
 // /api/* itself, so no base URL or CORS config is needed.
 const REFRESH_INTERVAL_MS = 15 * 60 * 1000;
+const JIRA_BROWSE_BASE = 'https://ahd-foundry.atlassian.net/browse/';
 
 const tooltip = document.getElementById('tooltip');
 
@@ -184,6 +185,12 @@ function renderWorkItemsTable(container, items, columns) {
       if (c.pill) {
         const pillClass = item.bucket === 'active' ? 'pill-active' : item.bucket === 'backlog' ? 'pill-backlog' : 'pill-other';
         td.appendChild(el('span', `pill ${pillClass}`, item[c.key] || '—'));
+      } else if (c.link && item[c.key]) {
+        const link = el('a', null, item[c.key]);
+        link.href = `${JIRA_BROWSE_BASE}${item[c.key]}`;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        td.appendChild(link);
       } else {
         td.textContent = item[c.key] ?? '—';
       }
@@ -371,6 +378,7 @@ const WORKLOAD_PAGES = [
     activeLabel: 'Active Work Items',
     backlogLabel: 'Backlog Work Items',
     hasSlicer: false,
+    tableTitle: '',
   },
   {
     id: 'ops-workload',
@@ -418,7 +426,7 @@ function buildWorkloadPanel(cfg) {
   const tablePanel = el('div', 'panel');
   tablePanel.style.marginTop = '18px';
   tablePanel.append(
-    el('h3', null, 'Work Items'),
+    el('h3', null, cfg.tableTitle ?? 'Work Items'),
     el('div', 'sub', cfg.hasSlicer !== false ? 'Filtered by the Opportunity Type slicer above' : '')
   );
   const tableScroll = el('div');
@@ -483,7 +491,7 @@ function renderWorkloadPanel(cfg) {
   );
 
   renderWorkItemsTable(document.getElementById(`${cfg.id}-table`), filteredItems, [
-    { key: 'key', header: 'Ticket' },
+    { key: 'key', header: 'Ticket', link: cfg.id === 'eng-workload' },
     { key: 'opportunitySummary', header: 'Opportunity Summary' },
     { key: 'issueType', header: 'Issue Type' },
     { key: 'status', header: 'Status', pill: true },
