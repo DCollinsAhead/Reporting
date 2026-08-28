@@ -837,7 +837,7 @@ async function loadEngManagerWorkload() {
     );
     renderClusteredColumnChart(document.getElementById('eng-mgr-pending-chart'), data.pendingAssignment);
     renderWorkItemsTable(document.getElementById('eng-mgr-table'), data.workItems, [
-      { key: 'key', header: 'Ticket' },
+      { key: 'key', header: 'Ticket', link: true },
       { key: 'opportunitySummary', header: 'Opportunity Summary' },
       { key: 'issueType', header: 'Issue Type' },
       { key: 'status', header: 'Status', pill: true },
