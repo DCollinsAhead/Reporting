@@ -800,7 +800,7 @@ function buildEngManagerWorkloadPanel() {
 
   const tablePanel = el('div', 'panel');
   tablePanel.style.marginTop = '18px';
-  tablePanel.append(el('h3', null, 'Active & Backlog Work Items'), el('div', 'sub', 'Unresolved items for Curt Petty and Taylor Lewis'));
+  tablePanel.append(el('h3', null, 'Active & Backlog Work Items'));
   const tableScroll = el('div');
   tableScroll.style.maxHeight = '480px';
   tableScroll.style.overflowY = 'auto';
