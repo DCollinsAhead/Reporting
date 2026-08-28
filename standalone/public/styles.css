@@ -193,6 +193,11 @@ main {
   gap: 6px;
 }
 
+.legend-title {
+  font-weight: 700;
+  color: var(--ink-primary);
+}
+
 .legend-swatch {
   width: 10px;
   height: 10px;

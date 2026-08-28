@@ -344,6 +344,7 @@ function renderClusteredColumnChart(container, records) {
   wrap.append(el('div', 'clustered-axis-title', 'Tickets'), axis, chart);
 
   const legend = el('div', 'legend');
+  legend.appendChild(el('span', 'legend-title', 'Complexity Level'));
   COMPLEXITY_ORDER.filter((c) => records.some((r) => r.complexity === c)).forEach((c) => {
     const item = el('div', 'legend-item');
     const swatch = el('span', 'legend-swatch');
