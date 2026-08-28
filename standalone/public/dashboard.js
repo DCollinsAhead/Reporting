@@ -270,6 +270,91 @@ function renderTotalLineOverlay(container, cols, months, max, totalLine, formatL
   container.appendChild(svg);
 }
 
+// Complexity Level is ordinal, not categorical (dataviz skill: an ordinal
+// dimension gets a single-hue monotone-lightness ramp, not a new distinct hue
+// per value). Validated via scripts/validate_palette.js --ordinal.
+const COMPLEXITY_ORDER = ['Easy', 'Medium', 'Hard', 'Super Hard'];
+const COMPLEXITY_COLORS = {
+  Easy: '#e6a660',
+  Medium: '#d68a30',
+  Hard: '#b8700f',
+  'Super Hard': '#8f5808',
+};
+function complexityColor(label) {
+  return COMPLEXITY_COLORS[label] || '#999';
+}
+
+// Ground-truthed from the source .pbix's "Workload Pending Assignment" visual
+// (clusteredColumnChart): a two-level category axis (Assignee, then Child
+// Issue Type within each assignee, dashed gridline separating assignees) with
+// Complexity Level as the clustered color series and a "Tickets" value axis.
+// records is the flat {assignee, issueType, complexity, count} shape returned
+// by the API.
+function renderClusteredColumnChart(container, records) {
+  if (records.length === 0) {
+    container.replaceChildren();
+    return;
+  }
+
+  const assignees = [...new Set(records.map((r) => r.assignee))].sort();
+  const groups = assignees.map((assignee) => {
+    const forAssignee = records.filter((r) => r.assignee === assignee);
+    const issueTypes = [...new Set(forAssignee.map((r) => r.issueType))].sort();
+    const categories = issueTypes.map((issueType) => ({
+      issueType,
+      bars: forAssignee
+        .filter((r) => r.issueType === issueType)
+        .sort((a, b) => COMPLEXITY_ORDER.indexOf(a.complexity) - COMPLEXITY_ORDER.indexOf(b.complexity)),
+    }));
+    return { assignee, categories };
+  });
+
+  const max = niceMax(Math.max(...records.map((r) => r.count)));
+
+  const chart = el('div', 'clustered-chart');
+  groups.forEach((group) => {
+    const groupEl = el('div', 'clustered-group');
+    const catsEl = el('div', 'clustered-categories');
+
+    group.categories.forEach((cat) => {
+      const catEl = el('div', 'clustered-category');
+      const barsEl = el('div', 'clustered-bars');
+      cat.bars.forEach((b) => {
+        const bar = el('div', 'clustered-bar');
+        bar.style.height = `${max > 0 ? Math.max((b.count / max) * 100, 2) : 0}%`;
+        bar.style.background = complexityColor(b.complexity);
+        bar.appendChild(el('span', 'clustered-bar-value', String(b.count)));
+        const tooltipText = `${b.assignee} - ${b.issueType} (${b.complexity}): ${b.count}`;
+        bar.addEventListener('mousemove', (evt) => showTooltip(evt, tooltipText));
+        bar.addEventListener('mouseleave', hideTooltip);
+        barsEl.appendChild(bar);
+      });
+      catEl.append(barsEl, el('div', 'clustered-category-label', cat.issueType));
+      catsEl.appendChild(catEl);
+    });
+
+    groupEl.append(catsEl, el('div', 'clustered-group-label', group.assignee));
+    chart.appendChild(groupEl);
+  });
+
+  const axis = el('div', 'clustered-axis');
+  [max, max / 2, 0].forEach((t) => axis.appendChild(el('span', null, String(Math.round(t)))));
+
+  const wrap = el('div', 'clustered-chart-wrap');
+  wrap.append(el('div', 'clustered-axis-title', 'Tickets'), axis, chart);
+
+  const legend = el('div', 'legend');
+  COMPLEXITY_ORDER.filter((c) => records.some((r) => r.complexity === c)).forEach((c) => {
+    const item = el('div', 'legend-item');
+    const swatch = el('span', 'legend-swatch');
+    swatch.style.background = complexityColor(c);
+    item.append(swatch, el('span', null, c));
+    legend.appendChild(item);
+  });
+
+  container.replaceChildren(legend, wrap);
+}
+
 function renderWorkItemsTable(container, items, columns) {
   const table = el('table', 'data-table');
   const thead = el('thead');
@@ -749,15 +834,7 @@ async function loadEngManagerWorkload() {
         .sort((a, b) => b.weight - a.weight)
         .map((w) => ({ label: w.displayName, value: w.weight, tooltipText: `${w.displayName}: ${w.weight} weighted` }))
     );
-    renderBarChart(
-      document.getElementById('eng-mgr-pending-chart'),
-      data.pendingAssignmentByAssignee.map((p) => ({
-        label: p.displayName,
-        value: p.count,
-        color: 'var(--ahead-blue)',
-        tooltipText: `${p.displayName}: ${p.count} pending assignment`,
-      }))
-    );
+    renderClusteredColumnChart(document.getElementById('eng-mgr-pending-chart'), data.pendingAssignment);
     renderWorkItemsTable(document.getElementById('eng-mgr-table'), data.workItems, [
       { key: 'key', header: 'Ticket' },
       { key: 'opportunitySummary', header: 'Opportunity Summary' },

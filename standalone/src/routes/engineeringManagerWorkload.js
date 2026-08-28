@@ -43,7 +43,11 @@ router.get('/api/engineering-manager-workload', async (req, res) => {
 
     const activeProjects = new Map();
     const teamAssignment = new Map();
-    const pendingAssignmentByAssignee = new Map();
+    // assignee -> issueType -> complexity -> count. Ground-truthed from the
+    // source .pbix's "Workload Pending Assignment" visual (clusteredColumnChart,
+    // Category = Assignee + Child Issue Type, Series = Complexity Level,
+    // Y = count of tickets, filtered to Status = "Pending Assignment").
+    const pendingAssignment = new Map();
     const workItems = [];
 
     for (const issue of issues) {
@@ -63,7 +67,12 @@ router.get('/api/engineering-manager-workload', async (req, res) => {
         teamAssignment.set(displayName, (teamAssignment.get(displayName) || 0) + weight);
       }
       if (statusName === 'Pending Assignment') {
-        pendingAssignmentByAssignee.set(displayName, (pendingAssignmentByAssignee.get(displayName) || 0) + 1);
+        const complexityLabel = complexityValue || 'Unknown';
+        if (!pendingAssignment.has(displayName)) pendingAssignment.set(displayName, new Map());
+        const byType = pendingAssignment.get(displayName);
+        if (!byType.has(issueType)) byType.set(issueType, new Map());
+        const byComplexity = byType.get(issueType);
+        byComplexity.set(complexityLabel, (byComplexity.get(complexityLabel) || 0) + 1);
       }
 
       if (isUnresolved) {
@@ -80,12 +89,21 @@ router.get('/api/engineering-manager-workload', async (req, res) => {
       }
     }
 
+    const pendingAssignmentRecords = [];
+    for (const [assignee, byType] of pendingAssignment) {
+      for (const [issueType, byComplexity] of byType) {
+        for (const [complexity, count] of byComplexity) {
+          pendingAssignmentRecords.push({ assignee, issueType, complexity, count });
+        }
+      }
+    }
+
     const round = (n) => Math.round(n * 100) / 100;
     const payload = {
       project: projectKey,
       activeProjects: [...activeProjects.entries()].map(([displayName, weight]) => ({ displayName, weight: round(weight) })),
       teamAssignment: [...teamAssignment.entries()].map(([displayName, weight]) => ({ displayName, weight: round(weight) })),
-      pendingAssignmentByAssignee: [...pendingAssignmentByAssignee.entries()].map(([displayName, count]) => ({ displayName, count })),
+      pendingAssignment: pendingAssignmentRecords,
       workItems,
       updatedAt: new Date().toISOString(),
     };

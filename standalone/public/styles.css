@@ -609,6 +609,115 @@ table.data-table td a:hover {
   margin-top: 6px;
 }
 
+.clustered-chart-wrap {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.clustered-axis-title {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--ink-muted);
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.clustered-axis {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 140px;
+  margin-top: 20px;
+  font-size: 0.66rem;
+  color: var(--ink-muted);
+  text-align: right;
+}
+
+.clustered-chart {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  height: 180px;
+  padding-top: 20px;
+  overflow-x: auto;
+  border-left: 1px solid var(--border);
+}
+
+.clustered-group {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  height: 100%;
+  padding: 0 14px;
+}
+
+.clustered-group + .clustered-group {
+  border-left: 1.5px dashed var(--border);
+}
+
+.clustered-categories {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+}
+
+.clustered-category {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.clustered-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 140px;
+}
+
+.clustered-bar {
+  width: 18px;
+  min-height: 2px;
+  border-radius: 2px 2px 0 0;
+  position: relative;
+}
+
+.clustered-bar-value {
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.clustered-category-label {
+  font-size: 0.64rem;
+  font-weight: 700;
+  color: var(--ink-primary);
+  margin-top: 6px;
+  text-align: center;
+  max-width: 80px;
+}
+
+.clustered-group-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--ink-primary);
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+  width: 100%;
+  text-align: center;
+}
+
 @media (max-width: 900px) {
   .row.cols-2,
   .row.cols-3 {
