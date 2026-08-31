@@ -436,7 +436,9 @@ function mondayOf(dateLike) {
 }
 
 function formatWeekLabel(date) {
-  return date.toLocaleDateString('en-US', { month: 'short', day: '2-digit' });
+  const monthDay = date.toLocaleDateString('en-US', { month: 'short', day: '2-digit' });
+  const year = String(date.getFullYear()).slice(-2);
+  return `${monthDay} '${year}`;
 }
 
 // Real Jira data frequently has only one of Start date/Due date populated
