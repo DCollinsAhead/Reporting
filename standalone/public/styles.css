@@ -512,6 +512,11 @@ table.data-table td a:hover {
   min-width: 4px;
 }
 
+.gantt-bar.is-partial {
+  opacity: 0.6;
+  border: 1px dashed rgba(0, 0, 0, 0.35);
+}
+
 .gantt-bar-resource {
   position: absolute;
   top: 9px;

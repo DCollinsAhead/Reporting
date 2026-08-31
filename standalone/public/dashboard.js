@@ -426,8 +426,24 @@ function formatWeekLabel(date) {
   return date.toLocaleDateString('en-US', { month: 'short', day: '2-digit' });
 }
 
+// Real Jira data frequently has only one of Start date/Due date populated
+// (confirmed against the live instance - e.g. many child issues carry a Due
+// date with no Start date, or neither). A ticket missing one date still gets
+// positioned as a zero-length marker at whichever date is known, rather than
+// disappearing entirely - only a ticket with neither date is truly unplottable.
+function ticketBounds(ticket) {
+  if (ticket.startDate && ticket.dueDate) {
+    return { start: new Date(ticket.startDate).getTime(), end: new Date(ticket.dueDate).getTime(), partial: false };
+  }
+  const known = ticket.startDate || ticket.dueDate;
+  if (!known) return null;
+  const t = new Date(known).getTime();
+  return { start: t, end: t, partial: true };
+}
+
 // Groups the (already-filtered) flat items list by assignee, sorting each
-// assignee's tickets by start date - matches the source visual's own sort.
+// assignee's tickets by their earliest known date - matches the source
+// visual's own sort, extended to rank undated tickets last instead of first.
 function buildGanttGroups(items) {
   const byAssignee = new Map();
   items.forEach((item) => {
@@ -437,7 +453,11 @@ function buildGanttGroups(items) {
   return [...byAssignee.entries()]
     .map(([assignee, tickets]) => ({
       assignee,
-      tickets: tickets.slice().sort((a, b) => (a.startDate || '').localeCompare(b.startDate || '')),
+      tickets: tickets.slice().sort((a, b) => {
+        const boundsA = ticketBounds(a);
+        const boundsB = ticketBounds(b);
+        return (boundsA ? boundsA.start : Infinity) - (boundsB ? boundsB.start : Infinity);
+      }),
     }))
     .sort((a, b) => a.assignee.localeCompare(b.assignee));
 }
@@ -453,15 +473,14 @@ const GANTT_DAY_PX = GANTT_WEEK_PX / 7;
 // re-renders with the same items array passed in, so expansion always
 // reflects whichever filters are currently applied to the page.
 function renderGanttChart(container, items) {
-  const dated = items.filter((i) => i.startDate && i.dueDate);
-  if (dated.length === 0) {
+  const allBounds = items.map(ticketBounds).filter(Boolean);
+  if (allBounds.length === 0) {
     container.replaceChildren(el('div', 'sub', 'No dated items to display.'));
     return;
   }
 
-  const allDates = dated.flatMap((i) => [new Date(i.startDate), new Date(i.dueDate)]);
-  const rangeStart = mondayOf(new Date(Math.min(...allDates)));
-  const lastDate = new Date(Math.max(...allDates));
+  const rangeStart = mondayOf(new Date(Math.min(...allBounds.map((b) => b.start))));
+  const lastDate = new Date(Math.max(...allBounds.map((b) => b.end)));
   let rangeEnd = mondayOf(lastDate);
   if (rangeEnd.getTime() <= lastDate.getTime()) rangeEnd = new Date(rangeEnd.getTime() + 7 * 86400000);
 
@@ -504,10 +523,11 @@ function renderGanttChart(container, items) {
 
     const track = el('div', 'gantt-track');
     track.style.width = `${totalWidth}px`;
-    const datedTickets = group.tickets.filter((t) => t.startDate && t.dueDate);
+    const datedTickets = group.tickets.filter((t) => ticketBounds(t));
     if (!isExpanded && datedTickets.length > 0) {
-      const groupStart = Math.min(...datedTickets.map((t) => new Date(t.startDate).getTime()));
-      const groupEnd = Math.max(...datedTickets.map((t) => new Date(t.dueDate).getTime()));
+      const boundsForGroup = datedTickets.map(ticketBounds);
+      const groupStart = Math.min(...boundsForGroup.map((b) => b.start));
+      const groupEnd = Math.max(...boundsForGroup.map((b) => b.end));
       const bar = el('div', 'gantt-bar');
       bar.style.left = `${xOf(groupStart)}px`;
       bar.style.width = `${Math.max(xOf(groupEnd) - xOf(groupStart), 4)}px`;
@@ -528,14 +548,17 @@ function renderGanttChart(container, items) {
 
         const childTrack = el('div', 'gantt-track');
         childTrack.style.width = `${totalWidth}px`;
-        if (ticket.startDate && ticket.dueDate) {
-          const left = xOf(ticket.startDate);
-          const width = Math.max(xOf(ticket.dueDate) - left, 4);
-          const bar = el('div', 'gantt-bar');
+        const bounds = ticketBounds(ticket);
+        if (bounds) {
+          const left = xOf(bounds.start);
+          const width = Math.max(xOf(bounds.end) - left, 4);
+          const bar = el('div', `gantt-bar${bounds.partial ? ' is-partial' : ''}`);
           bar.style.left = `${left}px`;
           bar.style.width = `${width}px`;
           bar.style.background = ganttComplexityColor(ticket.complexity);
-          const tooltipText = `${ticket.key} - ${ticket.opportunitySummary} (${ticket.complexity}): ${ticket.startDate.slice(0, 10)} to ${ticket.dueDate.slice(0, 10)}`;
+          const tooltipText = bounds.partial
+            ? `${ticket.key} - ${ticket.opportunitySummary} (${ticket.complexity}): ${ticket.startDate ? `Start ${ticket.startDate.slice(0, 10)}` : `Due ${ticket.dueDate.slice(0, 10)}`} (other date not set)`
+            : `${ticket.key} - ${ticket.opportunitySummary} (${ticket.complexity}): ${ticket.startDate.slice(0, 10)} to ${ticket.dueDate.slice(0, 10)}`;
           bar.addEventListener('mousemove', (evt) => showTooltip(evt, tooltipText));
           bar.addEventListener('mouseleave', hideTooltip);
           const resource = el('span', 'gantt-bar-resource', ticket.key);
