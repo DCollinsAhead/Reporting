@@ -44,6 +44,7 @@ router.get('/api/engineering-staffing-planning', async (req, res) => {
     const issues = await searchAll(jql, [
       'assignee',
       'issuetype',
+      'status',
       complexityField,
       'parent',
       startDateField,
@@ -58,6 +59,7 @@ router.get('/api/engineering-staffing-planning', async (req, res) => {
     for (const issue of issues) {
       const displayName = issue.fields.assignee?.displayName || 'Unassigned';
       const issueType = issue.fields.issuetype?.name;
+      const statusName = issue.fields.status?.name;
       const complexityValue = issue.fields[complexityField]?.value ?? issue.fields[complexityField] ?? null;
       const startDate = issue.fields[startDateField];
       const dueDate = issue.fields[dueDateField];
@@ -75,6 +77,8 @@ router.get('/api/engineering-staffing-planning', async (req, res) => {
         assignee: displayName,
         issueType,
         complexity: complexityValue || '—',
+        status: statusName,
+        bucket: statusName === 'Pending Assignment' ? 'backlog' : 'other',
         startDate: startDate || null,
         dueDate: dueDate || null,
       });

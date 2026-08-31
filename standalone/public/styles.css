@@ -298,6 +298,18 @@ table.data-table th {
   background: #d3e2f7;
 }
 
+#eng-staffing-projects-table thead th {
+  position: sticky;
+  top: 0;
+  background: #1c4cbf;
+  color: #fff;
+  z-index: 1;
+}
+
+#eng-staffing-projects-table tbody tr:nth-child(even) {
+  background: #d3e2f7;
+}
+
 table.data-table td a {
   color: var(--ahead-blue);
   text-decoration: none;

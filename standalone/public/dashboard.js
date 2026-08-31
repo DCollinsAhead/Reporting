@@ -152,6 +152,17 @@ function formatMonthLabel(monthStr) {
   });
 }
 
+// "2027-02-01" -> "Monday, February 01, 2027".
+function formatFullDate(dateStr) {
+  if (!dateStr) return '—';
+  return new Date(dateStr).toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: '2-digit',
+    year: 'numeric',
+  });
+}
+
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
 // Total-line overlay is a derived sum plotted against the *same* axis as the
@@ -377,6 +388,8 @@ function renderWorkItemsTable(container, items, columns) {
         link.target = '_blank';
         link.rel = 'noopener noreferrer';
         td.appendChild(link);
+      } else if (c.format) {
+        td.textContent = c.format(item[c.key], item);
       } else {
         td.textContent = item[c.key] ?? '—';
       }
@@ -1068,6 +1081,9 @@ function buildEngStaffingPanel() {
     'Projected Workload = Workload Weight V3 for issues that have not started yet (Start date in the future).'
   );
   card.appendChild(el('div', 'status-line', '')).id = 'eng-staffing-status';
+  // Tab-wide - filters the projected-workload chart, the Gantt, and the
+  // table below together, not just one visual.
+  card.appendChild(buildSlicerBox('eng-staffing-assignee-slicer', 'eng-staffing-assignee-clear', 'Assignee'));
 
   const projPanel = el('div', 'panel');
   projPanel.append(el('h3', null, 'Future (Projected) Workload by Assignee'), Object.assign(el('div'), { id: 'eng-staffing-chart' }));
@@ -1079,21 +1095,82 @@ function buildEngStaffingPanel() {
     Object.assign(el('div'), { id: 'eng-staffing-timeline' })
   );
 
-  card.append(projPanel, timelinePanel);
+  const tablePanel = el('div', 'panel');
+  tablePanel.style.marginTop = '18px';
+  tablePanel.appendChild(el('h3', null, 'Project Timeline'));
+  const tableScroll = el('div', 'table-scroll');
+  tableScroll.id = 'eng-staffing-projects-table';
+  tableScroll.style.maxHeight = '480px';
+  tableScroll.style.overflowY = 'auto';
+  const table = el('table', 'data-table');
+  table.id = 'eng-staffing-table';
+  tableScroll.appendChild(table);
+  tablePanel.appendChild(tableScroll);
+
+  card.append(projPanel, timelinePanel, tablePanel);
   section.appendChild(card);
+
+  section.querySelector('#eng-staffing-assignee-slicer .all-chip').addEventListener('click', () => {
+    if (!engStaffingData) return;
+    engStaffingAssigneeSelected = new Set(engStaffingData.timeline.map((i) => i.assignee));
+    setAllChipsActive('eng-staffing-assignee-slicer', true);
+    renderEngStaffingPlanning();
+  });
+  section.querySelector('#eng-staffing-assignee-clear').addEventListener('click', () => {
+    engStaffingAssigneeSelected = new Set();
+    setAllChipsActive('eng-staffing-assignee-slicer', false);
+    renderEngStaffingPlanning();
+  });
+
   return section;
+}
+
+let engStaffingData = null;
+let engStaffingAssigneeSelected = new Set();
+
+function renderEngStaffingPlanning() {
+  if (!engStaffingData) return;
+  const { projectedWorkload, timeline } = engStaffingData;
+  const filteredTimeline = timeline.filter((i) => engStaffingAssigneeSelected.has(i.assignee));
+  const filteredProjected = projectedWorkload.filter((w) => engStaffingAssigneeSelected.has(w.displayName));
+
+  renderBulletChart(
+    document.getElementById('eng-staffing-chart'),
+    filteredProjected.map((w) => ({ label: w.displayName, value: w.weight, tooltipText: `${w.displayName}: ${w.weight} projected` }))
+  );
+  renderGanttChart(document.getElementById('eng-staffing-timeline'), filteredTimeline);
+  renderWorkItemsTable(
+    document.getElementById('eng-staffing-table'),
+    filteredTimeline.slice().sort((a, b) => (b.startDate || '').localeCompare(a.startDate || '')),
+    [
+      { key: 'key', header: 'Ticket', link: true },
+      { key: 'assignee', header: 'Assignee' },
+      { key: 'issueType', header: 'Issue Type' },
+      { key: 'opportunitySummary', header: 'Summary' },
+      { key: 'startDate', header: 'Start date', format: formatFullDate },
+      { key: 'dueDate', header: 'Due date', format: formatFullDate },
+      { key: 'complexity', header: 'Complexity Level' },
+      { key: 'status', header: 'Status', pill: true },
+    ]
+  );
 }
 
 async function loadEngStaffingPlanning() {
   const statusEl = document.getElementById('eng-staffing-status');
   try {
     const data = await fetchJSON('/api/engineering-staffing-planning');
+    engStaffingData = data;
 
-    renderBulletChart(
-      document.getElementById('eng-staffing-chart'),
-      data.projectedWorkload.map((w) => ({ label: w.displayName, value: w.weight, tooltipText: `${w.displayName}: ${w.weight} projected` }))
-    );
-    renderGanttChart(document.getElementById('eng-staffing-timeline'), data.timeline);
+    const assignees = [...new Set(data.timeline.map((i) => i.assignee))].sort((a, b) => a.localeCompare(b));
+    engStaffingAssigneeSelected = new Set(assignees);
+    buildSlicerChips('eng-staffing-assignee-slicer', assignees, (value, isNowSelected) => {
+      if (isNowSelected) engStaffingAssigneeSelected.add(value);
+      else engStaffingAssigneeSelected.delete(value);
+      renderEngStaffingPlanning();
+    });
+    setAllChipsActive('eng-staffing-assignee-slicer', true);
+
+    renderEngStaffingPlanning();
 
     setSectionStatus(statusEl, '', false);
     return data.updatedAt;
