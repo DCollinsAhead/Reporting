@@ -52,7 +52,6 @@ router.get('/api/re-issue-tracking', async (req, res) => {
 
     const bySource = new Map();
     const byFindingType = new Map();
-    const bySystemic = new Map();
     const byMonthAndOppType = new Map();
     const findings = [];
 
@@ -67,7 +66,6 @@ router.get('/api/re-issue-tracking', async (req, res) => {
 
       bySource.set(source, (bySource.get(source) || 0) + 1);
       byFindingType.set(findingType, (byFindingType.get(findingType) || 0) + 1);
-      bySystemic.set(systemic, (bySystemic.get(systemic) || 0) + 1);
 
       if (!byMonthAndOppType.has(month)) byMonthAndOppType.set(month, new Map());
       const monthMap = byMonthAndOppType.get(month);
@@ -82,6 +80,19 @@ router.get('/api/re-issue-tracking', async (req, res) => {
         systemic,
         status: issue.fields.status?.name,
       });
+    }
+
+    // Ground-truthed: unlike Issue Source/Issue Type, the Systemic? pie
+    // chart's own filterConfig (Report/definition/pages/.../visuals/
+    // 2bc272a8e2fd8a3d74e1/visual.json) carries no RelativeDate filter at
+    // all - only the Production Finding issuetype filter - so it's computed
+    // from every Production Finding ever, not just the last WINDOW_DAYS.
+    const allTimeJql = `project = ${projectKey} AND issuetype = "Production Finding"`;
+    const allTimeIssues = await searchAll(allTimeJql, [systemicField]);
+    const bySystemic = new Map();
+    for (const issue of allTimeIssues) {
+      const systemic = issue.fields[systemicField]?.value ?? issue.fields[systemicField] ?? 'Unknown';
+      bySystemic.set(systemic, (bySystemic.get(systemic) || 0) + 1);
     }
 
     const toCounts = (map) => [...map.entries()].map(([label, count]) => ({ label, count })).sort((a, b) => b.count - a.count);
