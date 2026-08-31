@@ -813,7 +813,6 @@ const WORKLOAD_PAGES = [
   {
     id: 'ops-workload',
     title: 'Operations Workload',
-    subtitle: 'Unresolved Operations Execution issues - weighted by Workload Weight V3.',
     apiPath: '/api/operations-workload',
     activeLabel: 'Active Work Items',
     backlogLabel: 'Backlog Work Items',
