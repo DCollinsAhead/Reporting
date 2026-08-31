@@ -6,10 +6,14 @@ const { enrichWithParentOpportunity } = require('../workloadAggregation');
 const router = express.Router();
 const CACHE_TTL_SECONDS = Number(process.env.CACHE_TTL_SECONDS || 300);
 
-// The source report's Created-date filter on this page wasn't fully
-// extracted; using the 180-day window the report's own text elsewhere on
-// this page (and the earlier static-HTML recreation) explicitly labels it as.
-const WINDOW_DAYS = 180;
+// Ground-truthed from the source .pbix's own RelativeDate filter on these
+// visuals (Report/definition/pages/.../visuals/949e2c27bad425d40c0b/
+// visual.json): Between DateAdd(DateAdd(Now(),1,Day),-120,Day) and Now() -
+// i.e. a 120-day trailing window, not the 180 days the visuals' own title
+// text claims ("Last 180 Days" is stale/mislabeled - the filter itself is
+// authoritative). Using the wrong 180-day window pulled in an extra ~60 days
+// of findings, inflating every count on this page.
+const WINDOW_DAYS = 120;
 
 // These two custom field IDs were provided directly (not resolved by name):
 // their real Jira display names are the bare "Issue Type"/"Issue Source",

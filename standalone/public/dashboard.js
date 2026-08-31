@@ -1279,7 +1279,7 @@ function buildReIssueTrackingPanel() {
 
   const card = buildCard(
     'R&E Issue Tracking',
-    `Production Findings from the last 180 days. Shown as ranked bars rather than pie charts - easier to compare at a glance.`
+    `Production Findings from the last 120 days. Shown as ranked bars rather than pie charts - easier to compare at a glance.`
   );
   card.appendChild(el('div', 'status-line', '')).id = 're-tracking-status';
 
