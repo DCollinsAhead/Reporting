@@ -389,41 +389,33 @@ table.data-table td a:hover {
   text-decoration: underline;
 }
 
-.gantt-scroll {
-  overflow-x: auto;
+.gantt-chart {
+  display: flex;
+  align-items: flex-start;
   border: 1px solid var(--border);
   border-radius: 8px;
+  overflow: hidden;
 }
 
-.gantt-row {
-  display: flex;
-  align-items: stretch;
-  border-bottom: 1px solid var(--border);
+.gantt-labels {
+  flex: 0 0 220px;
+  width: 220px;
+  border-right: 1px solid var(--border);
 }
 
-.gantt-header-row {
-  border-bottom: 1px solid var(--border);
-  background: var(--surface-alt);
-  position: sticky;
-  top: 0;
-  z-index: 3;
+.gantt-scroll {
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
 }
 
-.gantt-body {
+.gantt-tracks {
   position: relative;
 }
 
-.gantt-body .gantt-row:last-child {
-  border-bottom: none;
-}
-
-.gantt-label {
-  flex: 0 0 220px;
-  width: 220px;
-  position: sticky;
-  left: 0;
-  z-index: 2;
-  background: #fff;
+.gantt-label-cell {
+  height: 36px;
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -431,14 +423,19 @@ table.data-table td a:hover {
   font-size: 0.78rem;
   font-weight: 600;
   color: var(--ink-primary);
-  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
 }
 
-.gantt-header-row .gantt-label {
+.gantt-labels .gantt-label-cell:last-child {
+  border-bottom: none;
+}
+
+.gantt-label-cell.is-header {
+  height: 30px;
   background: var(--surface-alt);
 }
 
-.gantt-label-child {
+.gantt-label-cell.is-child {
   font-weight: 400;
   font-style: italic;
   padding-left: 30px;
@@ -482,14 +479,20 @@ table.data-table td a:hover {
   text-decoration: underline;
 }
 
-.gantt-track {
+.gantt-track-cell {
   position: relative;
-  flex: 0 0 auto;
   height: 36px;
+  box-sizing: border-box;
+  border-bottom: 1px solid var(--border);
 }
 
-.gantt-header-row .gantt-track {
+.gantt-tracks .gantt-track-cell:last-child {
+  border-bottom: none;
+}
+
+.gantt-track-cell.is-header {
   height: 30px;
+  background: var(--surface-alt);
 }
 
 .gantt-week-tick {

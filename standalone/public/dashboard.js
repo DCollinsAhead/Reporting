@@ -463,7 +463,6 @@ function buildGanttGroups(items) {
 }
 
 const GANTT_WEEK_PX = 90;
-const GANTT_LABEL_PX = 220;
 const GANTT_DAY_PX = GANTT_WEEK_PX / 7;
 
 // Ground-truthed from the source .pbix's Gantt chart: a two-level Y axis
@@ -472,6 +471,15 @@ const GANTT_DAY_PX = GANTT_WEEK_PX / 7;
 // (todayColor #00B388). Clicking an assignee's name toggles ganttExpanded and
 // re-renders with the same items array passed in, so expansion always
 // reflects whichever filters are currently applied to the page.
+//
+// The name column is built as its own never-scrolling pane (.gantt-labels)
+// next to a separately-scrolling track pane (.gantt-scroll), rather than one
+// sticky-left cell per flex row: `position: sticky` inside a per-row flex
+// layout stops staying stuck in this Chromium build once there are more than
+// a couple of rows (confirmed with a minimal repro outside this app - 2 rows
+// stick correctly, 3+ rows silently break), so the two-pane split sidesteps
+// that rather than depending on it. The two panes are kept aligned by giving
+// every row an identical, explicit height in both.
 function renderGanttChart(container, items) {
   const allBounds = items.map(ticketBounds).filter(Boolean);
   if (allBounds.length === 0) {
@@ -493,21 +501,24 @@ function renderGanttChart(container, items) {
 
   const groups = buildGanttGroups(items);
 
-  const header = el('div', 'gantt-row gantt-header-row');
-  const headerTrack = el('div', 'gantt-track');
+  const labelRows = [];
+  const trackRows = [];
+
+  const headerLabel = el('div', 'gantt-label-cell is-header');
+  const headerTrack = el('div', 'gantt-track-cell is-header');
   headerTrack.style.width = `${totalWidth}px`;
   weeks.forEach((w) => {
     const tick = el('div', 'gantt-week-tick', formatWeekLabel(w));
     tick.style.left = `${xOf(w)}px`;
     headerTrack.appendChild(tick);
   });
-  header.append(el('div', 'gantt-label'), headerTrack);
+  labelRows.push(headerLabel);
+  trackRows.push(headerTrack);
 
-  const bodyRows = [];
   groups.forEach((group) => {
     const isExpanded = ganttExpanded.has(group.assignee);
 
-    const label = el('div', 'gantt-label');
+    const label = el('div', 'gantt-label-cell');
     const toggle = el('button', 'gantt-toggle', isExpanded ? '−' : '+');
     toggle.type = 'button';
     const nameBtn = el('button', 'gantt-name', group.assignee);
@@ -521,7 +532,7 @@ function renderGanttChart(container, items) {
     nameBtn.addEventListener('click', onToggle);
     label.append(toggle, nameBtn);
 
-    const track = el('div', 'gantt-track');
+    const track = el('div', 'gantt-track-cell');
     track.style.width = `${totalWidth}px`;
     const datedTickets = group.tickets.filter((t) => ticketBounds(t));
     if (!isExpanded && datedTickets.length > 0) {
@@ -537,16 +548,15 @@ function renderGanttChart(container, items) {
       bar.addEventListener('mouseleave', hideTooltip);
       track.appendChild(bar);
     }
-    const groupRow = el('div', 'gantt-row');
-    groupRow.append(label, track);
-    bodyRows.push(groupRow);
+    labelRows.push(label);
+    trackRows.push(track);
 
     if (isExpanded) {
       group.tickets.forEach((ticket) => {
-        const childLabel = el('div', 'gantt-label gantt-label-child', ticket.opportunitySummary);
+        const childLabel = el('div', 'gantt-label-cell is-child', ticket.opportunitySummary);
         childLabel.title = ticket.opportunitySummary;
 
-        const childTrack = el('div', 'gantt-track');
+        const childTrack = el('div', 'gantt-track-cell');
         childTrack.style.width = `${totalWidth}px`;
         const bounds = ticketBounds(ticket);
         if (bounds) {
@@ -565,21 +575,23 @@ function renderGanttChart(container, items) {
           resource.style.left = `${left + width + 6}px`;
           childTrack.append(bar, resource);
         }
-        const childRow = el('div', 'gantt-row');
-        childRow.append(childLabel, childTrack);
-        bodyRows.push(childRow);
+        labelRows.push(childLabel);
+        trackRows.push(childTrack);
       });
     }
   });
 
-  const body = el('div', 'gantt-body');
-  body.append(...bodyRows);
+  const labelsCol = el('div', 'gantt-labels');
+  labelsCol.append(...labelRows);
+
+  const tracksCol = el('div', 'gantt-tracks');
+  tracksCol.append(...trackRows);
 
   const today = new Date();
   if (today >= rangeStart && today <= rangeEnd) {
     const todayLine = el('div', 'gantt-today-line');
-    todayLine.style.left = `${GANTT_LABEL_PX + xOf(today)}px`;
-    body.appendChild(todayLine);
+    todayLine.style.left = `${xOf(today)}px`;
+    tracksCol.appendChild(todayLine);
   }
 
   const allExpanded = groups.length > 0 && groups.every((g) => ganttExpanded.has(g.assignee));
@@ -604,9 +616,12 @@ function renderGanttChart(container, items) {
   toolbar.append(legend, expandAllBtn);
 
   const scroll = el('div', 'gantt-scroll');
-  scroll.append(header, body);
+  scroll.appendChild(tracksCol);
 
-  container.replaceChildren(toolbar, scroll);
+  const chart = el('div', 'gantt-chart');
+  chart.append(labelsCol, scroll);
+
+  container.replaceChildren(toolbar, chart);
 
   // Ground-truthed from the source .pbix (general.scrollToCurrentTime: true):
   // the chart's shared date axis spans the full project (often 2+ years), so
