@@ -389,45 +389,201 @@ function renderWorkItemsTable(container, items, columns) {
   container.replaceChildren(table);
 }
 
-function renderTimeline(container, items) {
-  if (items.length === 0) {
-    container.replaceChildren();
+// Complexity Level color scheme specific to this visual - ground-truthed from
+// the source .pbix's "Projects by Assignee" Gantt chart (Report/definition/
+// pages/.../visuals/c7279fcd24b0070c76dd/visual.json): Easy uses the report's
+// accent blue, Medium/Hard are the visual's hardcoded #EC721B / #C8222E. This
+// is a separate scheme from Workload Pending Assignment's orange ordinal ramp
+// - each source visual defines its own legend colors independently.
+// "Super Hard" has no rule in the source visual (it never occurred in this
+// Gantt's data); extended here with a darker red to continue the
+// increasing-severity pattern.
+const GANTT_COMPLEXITY_COLORS = {
+  Easy: '#1c4cbf',
+  Medium: '#EC721B',
+  Hard: '#C8222E',
+  'Super Hard': '#7A1220',
+};
+function ganttComplexityColor(label) {
+  return GANTT_COMPLEXITY_COLORS[label] || '#999';
+}
+
+// Which assignee rows are currently expanded - module-level so it survives
+// the 5-minute auto-refresh re-render instead of resetting every time.
+const ganttExpanded = new Set();
+
+// Normalizes to midnight Monday of the given date's week - the source
+// visual's date axis is configured as Week intervals starting Monday.
+function mondayOf(dateLike) {
+  const d = new Date(dateLike);
+  d.setHours(0, 0, 0, 0);
+  const day = d.getDay();
+  d.setDate(d.getDate() + (day === 0 ? -6 : 1 - day));
+  return d;
+}
+
+function formatWeekLabel(date) {
+  return date.toLocaleDateString('en-US', { month: 'short', day: '2-digit' });
+}
+
+// Groups the (already-filtered) flat items list by assignee, sorting each
+// assignee's tickets by start date - matches the source visual's own sort.
+function buildGanttGroups(items) {
+  const byAssignee = new Map();
+  items.forEach((item) => {
+    if (!byAssignee.has(item.assignee)) byAssignee.set(item.assignee, []);
+    byAssignee.get(item.assignee).push(item);
+  });
+  return [...byAssignee.entries()]
+    .map(([assignee, tickets]) => ({
+      assignee,
+      tickets: tickets.slice().sort((a, b) => (a.startDate || '').localeCompare(b.startDate || '')),
+    }))
+    .sort((a, b) => a.assignee.localeCompare(b.assignee));
+}
+
+const GANTT_WEEK_PX = 90;
+const GANTT_LABEL_PX = 220;
+const GANTT_DAY_PX = GANTT_WEEK_PX / 7;
+
+// Ground-truthed from the source .pbix's Gantt chart: a two-level Y axis
+// (Assignee, then each of their tickets once expanded), a weekly X axis
+// starting Monday, Complexity Level bar coloring, and a dashed "today" line
+// (todayColor #00B388). Clicking an assignee's name toggles ganttExpanded and
+// re-renders with the same items array passed in, so expansion always
+// reflects whichever filters are currently applied to the page.
+function renderGanttChart(container, items) {
+  const dated = items.filter((i) => i.startDate && i.dueDate);
+  if (dated.length === 0) {
+    container.replaceChildren(el('div', 'sub', 'No dated items to display.'));
     return;
   }
-  const dates = items.flatMap((i) => [i.startDate, i.dueDate]).filter(Boolean).map((d) => new Date(d).getTime());
-  const min = Math.min(...dates);
-  const max = Math.max(...dates);
-  const span = Math.max(max - min, 1);
 
-  const table = el('table', 'data-table');
-  const thead = el('thead');
-  const headRow = el('tr');
-  ['Ticket', 'Opportunity Summary', 'Assignee', 'Complexity', 'Timeline'].forEach((h) => headRow.appendChild(el('th', null, h)));
-  thead.appendChild(headRow);
+  const allDates = dated.flatMap((i) => [new Date(i.startDate), new Date(i.dueDate)]);
+  const rangeStart = mondayOf(new Date(Math.min(...allDates)));
+  const lastDate = new Date(Math.max(...allDates));
+  let rangeEnd = mondayOf(lastDate);
+  if (rangeEnd.getTime() <= lastDate.getTime()) rangeEnd = new Date(rangeEnd.getTime() + 7 * 86400000);
 
-  const tbody = el('tbody');
-  items.forEach((item) => {
-    const tr = el('tr');
-    [item.key, item.opportunitySummary, item.assignee, item.complexity].forEach((v) => tr.appendChild(el('td', null, v ?? '—')));
+  const weeks = [];
+  for (let d = new Date(rangeStart); d < rangeEnd; d = new Date(d.getTime() + 7 * 86400000)) {
+    weeks.push(new Date(d));
+  }
+  const totalWidth = weeks.length * GANTT_WEEK_PX;
+  const xOf = (dateLike) => ((new Date(dateLike).getTime() - rangeStart.getTime()) / 86400000) * GANTT_DAY_PX;
 
-    const timelineTd = el('td');
-    const track = el('div', 'timeline-track');
-    if (item.startDate && item.dueDate) {
-      const s = new Date(item.startDate).getTime();
-      const e = new Date(item.dueDate).getTime();
-      const bar = el('div', 'timeline-bar');
-      bar.style.left = `${((s - min) / span) * 100}%`;
-      bar.style.width = `${Math.max(((e - s) / span) * 100, 1.5)}%`;
-      bar.title = `${item.startDate.slice(0, 10)} to ${item.dueDate.slice(0, 10)}`;
+  const groups = buildGanttGroups(items);
+
+  const header = el('div', 'gantt-row gantt-header-row');
+  const headerTrack = el('div', 'gantt-track');
+  headerTrack.style.width = `${totalWidth}px`;
+  weeks.forEach((w) => {
+    const tick = el('div', 'gantt-week-tick', formatWeekLabel(w));
+    tick.style.left = `${xOf(w)}px`;
+    headerTrack.appendChild(tick);
+  });
+  header.append(el('div', 'gantt-label'), headerTrack);
+
+  const bodyRows = [];
+  groups.forEach((group) => {
+    const isExpanded = ganttExpanded.has(group.assignee);
+
+    const label = el('div', 'gantt-label');
+    const toggle = el('button', 'gantt-toggle', isExpanded ? '−' : '+');
+    toggle.type = 'button';
+    const nameBtn = el('button', 'gantt-name', group.assignee);
+    nameBtn.type = 'button';
+    const onToggle = () => {
+      if (isExpanded) ganttExpanded.delete(group.assignee);
+      else ganttExpanded.add(group.assignee);
+      renderGanttChart(container, items);
+    };
+    toggle.addEventListener('click', onToggle);
+    nameBtn.addEventListener('click', onToggle);
+    label.append(toggle, nameBtn);
+
+    const track = el('div', 'gantt-track');
+    track.style.width = `${totalWidth}px`;
+    const datedTickets = group.tickets.filter((t) => t.startDate && t.dueDate);
+    if (!isExpanded && datedTickets.length > 0) {
+      const groupStart = Math.min(...datedTickets.map((t) => new Date(t.startDate).getTime()));
+      const groupEnd = Math.max(...datedTickets.map((t) => new Date(t.dueDate).getTime()));
+      const bar = el('div', 'gantt-bar');
+      bar.style.left = `${xOf(groupStart)}px`;
+      bar.style.width = `${Math.max(xOf(groupEnd) - xOf(groupStart), 4)}px`;
+      bar.style.background = ganttComplexityColor(datedTickets[0].complexity);
+      const tooltipText = `${group.assignee}: ${datedTickets.length} ticket${datedTickets.length === 1 ? '' : 's'}`;
+      bar.addEventListener('mousemove', (evt) => showTooltip(evt, tooltipText));
+      bar.addEventListener('mouseleave', hideTooltip);
       track.appendChild(bar);
     }
-    timelineTd.appendChild(track);
-    tr.appendChild(timelineTd);
-    tbody.appendChild(tr);
+    const groupRow = el('div', 'gantt-row');
+    groupRow.append(label, track);
+    bodyRows.push(groupRow);
+
+    if (isExpanded) {
+      group.tickets.forEach((ticket) => {
+        const childLabel = el('div', 'gantt-label gantt-label-child', ticket.opportunitySummary);
+        childLabel.title = ticket.opportunitySummary;
+
+        const childTrack = el('div', 'gantt-track');
+        childTrack.style.width = `${totalWidth}px`;
+        if (ticket.startDate && ticket.dueDate) {
+          const left = xOf(ticket.startDate);
+          const width = Math.max(xOf(ticket.dueDate) - left, 4);
+          const bar = el('div', 'gantt-bar');
+          bar.style.left = `${left}px`;
+          bar.style.width = `${width}px`;
+          bar.style.background = ganttComplexityColor(ticket.complexity);
+          const tooltipText = `${ticket.key} - ${ticket.opportunitySummary} (${ticket.complexity}): ${ticket.startDate.slice(0, 10)} to ${ticket.dueDate.slice(0, 10)}`;
+          bar.addEventListener('mousemove', (evt) => showTooltip(evt, tooltipText));
+          bar.addEventListener('mouseleave', hideTooltip);
+          const resource = el('span', 'gantt-bar-resource', ticket.key);
+          resource.style.left = `${left + width + 6}px`;
+          childTrack.append(bar, resource);
+        }
+        const childRow = el('div', 'gantt-row');
+        childRow.append(childLabel, childTrack);
+        bodyRows.push(childRow);
+      });
+    }
   });
 
-  table.append(thead, tbody);
-  container.replaceChildren(table);
+  const body = el('div', 'gantt-body');
+  body.append(...bodyRows);
+
+  const today = new Date();
+  if (today >= rangeStart && today <= rangeEnd) {
+    const todayLine = el('div', 'gantt-today-line');
+    todayLine.style.left = `${GANTT_LABEL_PX + xOf(today)}px`;
+    body.appendChild(todayLine);
+  }
+
+  const allExpanded = groups.length > 0 && groups.every((g) => ganttExpanded.has(g.assignee));
+  const expandAllBtn = el('button', 'gantt-expand-all', allExpanded ? 'Collapse All' : 'Expand All');
+  expandAllBtn.type = 'button';
+  expandAllBtn.addEventListener('click', () => {
+    groups.forEach((g) => (allExpanded ? ganttExpanded.delete(g.assignee) : ganttExpanded.add(g.assignee)));
+    renderGanttChart(container, items);
+  });
+
+  const legend = el('div', 'legend');
+  legend.appendChild(el('span', 'legend-title', 'Complexity Level'));
+  COMPLEXITY_ORDER.filter((c) => GANTT_COMPLEXITY_COLORS[c] && items.some((i) => i.complexity === c)).forEach((c) => {
+    const item = el('div', 'legend-item');
+    const swatch = el('span', 'legend-swatch');
+    swatch.style.background = ganttComplexityColor(c);
+    item.append(swatch, el('span', null, c));
+    legend.appendChild(item);
+  });
+
+  const toolbar = el('div', 'gantt-toolbar');
+  toolbar.append(legend, expandAllBtn);
+
+  const scroll = el('div', 'gantt-scroll');
+  scroll.append(header, body);
+
+  container.replaceChildren(toolbar, scroll);
 }
 
 // ---------- Shared UI builders ----------
@@ -868,11 +1024,10 @@ function buildEngStaffingPanel() {
   const projPanel = el('div', 'panel');
   projPanel.append(el('h3', null, 'Future (Projected) Workload by Assignee'), Object.assign(el('div'), { id: 'eng-staffing-chart' }));
 
-  const timelinePanel = el('div', 'panel');
+  const timelinePanel = el('div', 'panel panel-accent');
   timelinePanel.style.marginTop = '18px';
   timelinePanel.append(
-    el('h3', null, 'Projects by Assignee (Timeline)'),
-    el('div', 'sub', 'Simplified from the source report\'s Gantt chart'),
+    el('h3', 'panel-header-banner', 'Projects by Assignee'),
     Object.assign(el('div'), { id: 'eng-staffing-timeline' })
   );
 
@@ -890,7 +1045,7 @@ async function loadEngStaffingPlanning() {
       document.getElementById('eng-staffing-chart'),
       data.projectedWorkload.map((w) => ({ label: w.displayName, value: w.weight, tooltipText: `${w.displayName}: ${w.weight} projected` }))
     );
-    renderTimeline(document.getElementById('eng-staffing-timeline'), data.timeline);
+    renderGanttChart(document.getElementById('eng-staffing-timeline'), data.timeline);
 
     setSectionStatus(statusEl, '', false);
     return data.updatedAt;
