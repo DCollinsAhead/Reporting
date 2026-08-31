@@ -808,6 +808,7 @@ const WORKLOAD_PAGES = [
     tableTitle: '',
     banner: 'Engineering',
     hasAssigneeSlicer: true,
+    accent: true,
   },
   {
     id: 'ops-workload',
@@ -816,6 +817,11 @@ const WORKLOAD_PAGES = [
     apiPath: '/api/operations-workload',
     activeLabel: 'Active Work Items',
     backlogLabel: 'Backlog Work Items',
+    hasSlicer: false,
+    tableTitle: '',
+    banner: 'Operations',
+    hasAssigneeSlicer: true,
+    accent: true,
   },
   {
     id: 'pgm-workload',
@@ -833,10 +839,11 @@ function buildWorkloadPanel(cfg) {
   const section = el('section', 'page-panel');
   section.id = `page-${cfg.id}`;
 
-  // Engineering Workload's KPI tiles/charts/table panels use the same blue
-  // accent (header band + border) as the page banner, for visual
-  // consistency across the page - other pages keep the plain default look.
-  const isAccentPage = cfg.id === 'eng-workload';
+  // Engineering Workload and Operations Workload's KPI tiles/charts/table
+  // panels use the same blue accent (header band + border) as their page
+  // banners, for visual consistency across the page - other pages keep the
+  // plain default look.
+  const isAccentPage = !!cfg.accent;
 
   const card = buildCard(cfg.title, cfg.subtitle, cfg.banner);
   if (cfg.hasSlicer !== false) {
@@ -936,7 +943,7 @@ function renderWorkloadPanel(cfg) {
   document.getElementById(`${cfg.id}-kpi-active`).textContent = filteredItems.filter((i) => i.bucket === 'active').length;
   document.getElementById(`${cfg.id}-kpi-backlog`).textContent = filteredItems.filter((i) => i.bucket === 'backlog').length;
 
-  const bulletOpts = cfg.id === 'eng-workload' ? { bands: WORKLOAD_BULLET_BANDS, axisMax: WORKLOAD_BULLET_AXIS_MAX } : {};
+  const bulletOpts = cfg.accent ? { bands: WORKLOAD_BULLET_BANDS, axisMax: WORKLOAD_BULLET_AXIS_MAX } : {};
   renderBulletChart(
     document.getElementById(`${cfg.id}-workload-chart`),
     filteredWorkload
@@ -955,7 +962,7 @@ function renderWorkloadPanel(cfg) {
   );
 
   renderWorkItemsTable(document.getElementById(`${cfg.id}-table`), filteredItems, [
-    { key: 'key', header: 'Ticket', link: cfg.id === 'eng-workload' },
+    { key: 'key', header: 'Ticket', link: !!cfg.accent },
     { key: 'opportunitySummary', header: 'Opportunity Summary' },
     { key: 'issueType', header: 'Issue Type' },
     { key: 'status', header: 'Status', pill: true },
