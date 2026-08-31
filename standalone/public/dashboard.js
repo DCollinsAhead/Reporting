@@ -163,6 +163,16 @@ function formatFullDate(dateStr) {
   });
 }
 
+// "2027-02-01" -> "Feb 01, 2027".
+function formatShortDate(dateStr) {
+  if (!dateStr) return '—';
+  return new Date(dateStr).toLocaleDateString('en-US', {
+    month: 'short',
+    day: '2-digit',
+    year: 'numeric',
+  });
+}
+
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
 // Total-line overlay is a derived sum plotted against the *same* axis as the
@@ -581,9 +591,12 @@ function renderGanttChart(container, items) {
           bar.style.left = `${left}px`;
           bar.style.width = `${width}px`;
           bar.style.background = ganttComplexityColor(ticket.complexity);
-          const tooltipText = bounds.partial
-            ? `${ticket.key} - ${ticket.opportunitySummary} (${ticket.complexity}): ${ticket.startDate ? `Start ${ticket.startDate.slice(0, 10)}` : `Due ${ticket.dueDate.slice(0, 10)}`} (other date not set)`
-            : `${ticket.key} - ${ticket.opportunitySummary} (${ticket.complexity}): ${ticket.startDate.slice(0, 10)} to ${ticket.dueDate.slice(0, 10)}`;
+          const tooltipText = [
+            ticket.startDate ? `Start: ${formatShortDate(ticket.startDate)}` : null,
+            ticket.dueDate ? `Due: ${formatShortDate(ticket.dueDate)}` : null,
+          ]
+            .filter(Boolean)
+            .join('  |  ');
           bar.addEventListener('mousemove', (evt) => showTooltip(evt, tooltipText));
           bar.addEventListener('mouseleave', hideTooltip);
           const resource = el('span', 'gantt-bar-resource', ticket.key);
