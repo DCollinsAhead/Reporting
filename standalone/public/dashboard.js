@@ -607,6 +607,16 @@ function renderGanttChart(container, items) {
   scroll.append(header, body);
 
   container.replaceChildren(toolbar, scroll);
+
+  // Ground-truthed from the source .pbix (general.scrollToCurrentTime: true):
+  // the chart's shared date axis spans the full project (often 2+ years), so
+  // without this, every render lands on the unscrolled left edge - the
+  // earliest date anywhere in the whole dataset - and everything clustered
+  // around today (i.e. most currently-relevant tickets) sits scrolled far out
+  // of view, looking like it simply isn't there.
+  if (today >= rangeStart && today <= rangeEnd) {
+    scroll.scrollLeft = Math.max(0, xOf(today) - 150);
+  }
 }
 
 // ---------- Shared UI builders ----------
